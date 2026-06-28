@@ -141,6 +141,4 @@ backend/node_modules/
 frontend/node_modules/
 
 # Agent/AI directories
-.agents
 .gemini
-project_state.md
