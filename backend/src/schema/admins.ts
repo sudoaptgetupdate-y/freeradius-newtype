@@ -1,0 +1,12 @@
+import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { tenants } from "./tenants";
+
+export const admins = pgTable("admins", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id), // Nullable for Super Admin
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  role: varchar("role", { enum: ["super_admin", "tenant_admin", "tenant_staff"] }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
