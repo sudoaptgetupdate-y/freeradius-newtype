@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Filter, MoreHorizontal, Plus, Edit, Trash2, LogOut, Loader2, User, Key, Package } from "lucide-react"
+import { Search, Filter, MoreHorizontal, Plus, Edit, Trash2, LogOut, Loader2, User, Key, Package, Building } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
@@ -311,72 +311,79 @@ export function UsersPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-foreground [&>button]:hover:bg-muted [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
-          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-6 border-b border-border bg-muted/30">
-            <DialogTitle className="flex items-center gap-2 text-[20px] sm:text-[22px] font-bold">
-              <div className="bg-primary/10 p-2 rounded-full">
-                <User className="h-5 w-5 text-primary" />
-              </div>
+        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
               Add User
             </DialogTitle>
-            <DialogDescription className="text-[13px] sm:text-[14px]">
+            <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
               Create a new user and assign a package.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateUser} className="flex flex-col h-full">
+          <form onSubmit={handleCreateUser} className="flex flex-col flex-1 min-h-0">
             <div className="grid gap-5 px-5 sm:px-7 py-4 flex-1 overflow-y-auto">
               {(user?.role === "super_admin" || user?.role === "admin") && (
                 <div className="space-y-2 bg-muted/30 p-3 rounded-lg border border-border/50">
-                  <Label htmlFor="tenant" className="text-xs font-semibold uppercase text-muted-foreground">Select Tenant</Label>
-                  <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val, profileName: ""})}>
-                    <SelectTrigger id="tenant">
-                      <SelectValue placeholder="Select a tenant" />
-                    </SelectTrigger>
+                  <Label htmlFor="tenant" className="text-[14px] font-semibold text-foreground">Select Tenant</Label>
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val, profileName: ""})}>
+                      <SelectTrigger id="tenant" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                        <SelectValue placeholder="Select a tenant" />
+                      </SelectTrigger>
                     <SelectContent>
                       {tenants.map(t => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  </div>
                 </div>
               )}
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-sm font-semibold flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5 text-blue-500" />
+                  <Label htmlFor="username" className="text-[14px] font-semibold text-foreground">
                     Username
                   </Label>
-                  <Input 
-                    id="username" 
-                    value={formData.username} 
-                    onChange={e => setFormData({...formData, username: e.target.value})} 
-                    required 
-                    placeholder="Enter username"
-                  />
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="username" 
+                      value={formData.username} 
+                      onChange={e => setFormData({...formData, username: e.target.value})} 
+                      required 
+                      placeholder="Enter username"
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-sm font-semibold flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5 text-orange-500" />
+                  <Label htmlFor="password" className="text-[14px] font-semibold text-foreground">
                     Password
                   </Label>
-                  <Input 
-                    id="password" 
-                    type="password"
-                    value={formData.password} 
-                    onChange={e => setFormData({...formData, password: e.target.value})} 
-                    required 
-                    placeholder="Enter password"
-                  />
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="password" 
+                      type="password"
+                      value={formData.password} 
+                      onChange={e => setFormData({...formData, password: e.target.value})} 
+                      required 
+                      placeholder="Enter password"
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="profile" className="text-sm font-semibold flex items-center gap-1.5">
-                    <Package className="h-3.5 w-3.5 text-purple-500" />
+                  <Label htmlFor="profile" className="text-[14px] font-semibold text-foreground">
                     Package / Profile
                   </Label>
-                  <Select value={formData.profileName} onValueChange={(val) => setFormData({...formData, profileName: val})} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a package" />
-                    </SelectTrigger>
+                  <div className="relative">
+                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Select value={formData.profileName} onValueChange={(val) => setFormData({...formData, profileName: val})} required>
+                      <SelectTrigger className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                        <SelectValue placeholder="Select a package" />
+                      </SelectTrigger>
                     <SelectContent>
                       {profiles
                         .filter(p => !p.tenantId || p.tenantId === formData.tenantId)
@@ -386,6 +393,7 @@ export function UsersPage() {
                       }
                     </SelectContent>
                   </Select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -393,7 +401,7 @@ export function UsersPage() {
               <Button type="button" variant="outline" className="w-full sm:w-auto h-[44px] px-5 rounded-[8px]" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading || profiles.length === 0} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20">
+              <Button type="submit" disabled={isLoading || profiles.length === 0} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save
               </Button>

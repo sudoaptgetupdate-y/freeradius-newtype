@@ -11,6 +11,7 @@ import { UsersPage } from "@/pages/users"
 import TenantsPage from "@/pages/tenants"
 import { ProfilesPage } from "@/pages/profiles"
 import NasPage from "@/pages/nas"
+import AdminsPage from "@/pages/admins"
 import "./i18n"
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
                 <Route path="tenants" element={<TenantsPage />} />
                 <Route path="profiles" element={<ProfilesPage />} />
                 <Route path="nas" element={<NasPage />} />
+                <Route path="admins" element={<AdminsPage />} />
               </Route>
             </Route>
 

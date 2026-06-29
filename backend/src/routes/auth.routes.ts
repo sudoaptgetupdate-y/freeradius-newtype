@@ -1,29 +1,22 @@
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { login } from "../controllers/auth.controller";
-import { z } from "zod";
+import { loginSchema } from "../services/auth.service";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-export default async function authRoutes(fastify: FastifyInstance) {
-  fastify.post(
-    "/login",
-    {
-      schema: {
-        body: z.object({
-          email: z.string().email(),
-          password: z.string(),
-        }),
-      },
-      config: {
-        rateLimit: {
-          max: 5,
-          timeWindow: '1 minute'
-        }
+export default async function authRoutes(app: FastifyInstance) {
+  const fastify = app.withTypeProvider<ZodTypeProvider>();
+  
+  fastify.post("/login", {
+    schema: {
+      body: loginSchema,
+      response: {
+        // We can define 200 response schema here later
       }
-    },
-    login
-  );
+    }
+  }, login);
 
-  // Example of a protected route
-  fastify.get("/me", { preValidation: [fastify.authenticate] }, async (request, reply) => {
-    return request.user;
+  fastify.post("/logout", async (request, reply) => {
+    reply.clearCookie("token", { path: "/" });
+    return reply.send({ message: "Logout successful" });
   });
 }

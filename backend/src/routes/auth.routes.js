@@ -1,27 +1,18 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = authRoutes;
-const fastify_1 = require("fastify");
-const auth_controller_1 = require("../controllers/auth.controller");
-const zod_1 = require("zod");
-async function authRoutes(fastify) {
+import { login } from "../controllers/auth.controller";
+import { loginSchema } from "../services/auth.service";
+export default async function authRoutes(app) {
+    const fastify = app.withTypeProvider();
     fastify.post("/login", {
         schema: {
-            body: zod_1.z.object({
-                email: zod_1.z.string().email(),
-                password: zod_1.z.string(),
-            }),
-        },
-        config: {
-            rateLimit: {
-                max: 5,
-                timeWindow: '1 minute'
+            body: loginSchema,
+            response: {
+            // We can define 200 response schema here later
             }
         }
-    }, auth_controller_1.login);
-    // Example of a protected route
-    fastify.get("/me", { preValidation: [fastify.authenticate] }, async (request, reply) => {
-        return request.user;
+    }, login);
+    fastify.post("/logout", async (request, reply) => {
+        reply.clearCookie("token", { path: "/" });
+        return reply.send({ message: "Logout successful" });
     });
 }
 //# sourceMappingURL=auth.routes.js.map

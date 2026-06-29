@@ -1,26 +1,21 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const db_1 = require("../src/db");
-const admins_1 = require("../src/schema/admins");
-const drizzle_orm_1 = require("drizzle-orm");
-const bcrypt_1 = __importDefault(require("bcrypt"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+import { db } from "../src/db";
+import { admins } from "../src/schema/admins";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+dotenv.config();
 const seed = async () => {
     console.log("Seeding Super Admin...");
     const email = "admin@saas.local";
     const password = "password123";
     // Check if exists
-    const existing = await db_1.db.select().from(admins_1.admins).where((0, drizzle_orm_1.eq)(admins_1.admins.email, email));
+    const existing = await db.select().from(admins).where(eq(admins.email, email));
     if (existing.length > 0) {
         console.log("Super admin already exists!");
         process.exit(0);
     }
-    const passwordHash = await bcrypt_1.default.hash(password, 10);
-    await db_1.db.insert(admins_1.admins).values({
+    const passwordHash = await bcrypt.hash(password, 10);
+    await db.insert(admins).values({
         email,
         passwordHash,
         role: "super_admin",

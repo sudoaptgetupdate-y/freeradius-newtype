@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Plus, Trash2, ShieldCheck, Loader2, Edit, Building, Tag, ArrowDown, ArrowUp, Clock, Info, Minus, Plus as PlusIcon } from "lucide-react"
-import { useTranslation } from "react-i18next"
+// import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
 import withReactContent from "sweetalert2-react-content"
@@ -37,7 +37,7 @@ type ProfileData = {
 }
 
 export function ProfilesPage() {
-  const { t } = useTranslation()
+  // const { t } = useTranslation()
   const { user } = useAuth()
   const MySwal = withReactContent(Swal)
   const [profiles, setProfiles] = useState<ProfileData[]>([])
@@ -84,6 +84,7 @@ export function ProfilesPage() {
     fetchTenants()
   }, [user])
 
+  // @ts-expect-error unused
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     

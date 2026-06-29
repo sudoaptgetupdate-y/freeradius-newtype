@@ -1,21 +1,16 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const postgres_js_1 = require("drizzle-orm/postgres-js");
-const migrator_1 = require("drizzle-orm/postgres-js/migrator");
-const postgres_1 = __importDefault(require("postgres"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
+import dotenv from "dotenv";
+dotenv.config();
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
     throw new Error("DATABASE_URL is missing");
 }
-const migrationClient = (0, postgres_1.default)(connectionString, { max: 1 });
+const migrationClient = postgres(connectionString, { max: 1 });
 async function main() {
     console.log("Running migrations...");
-    await (0, migrator_1.migrate)((0, postgres_js_1.drizzle)(migrationClient), { migrationsFolder: "./drizzle" });
+    await migrate(drizzle(migrationClient), { migrationsFolder: "./drizzle" });
     console.log("Migrations complete!");
     process.exit(0);
 }

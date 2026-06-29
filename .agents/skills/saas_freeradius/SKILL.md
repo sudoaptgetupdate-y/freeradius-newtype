@@ -18,6 +18,7 @@ description: Core guidelines and coding standards for developing the SaaS FreeRA
 
 ## 3. Data Lifecycle (การจัดการข้อมูล)
 - **Soft Delete:** ห้ามใช้คำสั่ง `DELETE` ทาง SQL สำหรับข้อมูลหลัก (Tenants, Admins, Users, NAS) ให้ใช้วิธีเปลี่ยนค่าหรือประทับเวลา `deleted_at = now()` แทน
+- **⚠️ FreeRADIUS Query Sync:** เมื่อบังคับใช้ Soft Delete ในฝั่ง DB แล้ว **ต้องเข้าไปแก้ไขคำสั่ง SQL ในไฟล์ `queries.conf` ของเซิร์ฟเวอร์ FreeRADIUS เสมอ** โดยต่อท้ายเงื่อนไขด้วย `AND deleted_at IS NULL` มิฉะนั้น FreeRADIUS จะยังอนุญาตให้ยูสเซอร์ที่ถูก Soft Delete ไปแล้วล็อกอินได้
 - **Hard Delete:** ใช้เฉพาะข้อมูลชั่วคราว เช่น Vouchers ที่หมดอายุแล้ว
 
 ## 4. UI/UX & API Standards
@@ -31,3 +32,9 @@ description: Core guidelines and coding standards for developing the SaaS FreeRA
 - ระลึกไว้เสมอว่าตัว FreeRADIUS ทำงานแบบ Real-time ร่วมกับ PostgreSQL
 - การจัดการ IoT ให้ใช้ตาราง `mac_bypass` แยกต่างหากจาก `radcheck`
 - หากหน้าจอ UI เกี่ยวข้องกับ Traffic กราฟ ให้พิจารณาว่าต้องดึงจาก `radacct` (Postgres) หรือ `LogQL` (Loki)
+
+---
+
+## 6. Enterprise Reliability & DB Practices
+- **Transaction Management:** เมื่อมีการสร้าง/แก้ไขข้อมูลหลายตารางที่ผูกพันกัน (เช่น สร้าง Tenant พร้อมเพิ่ม Admin คนแรก) **บังคับใช้ `db.transaction()` เสมอ** เพื่อป้องกันข้อมูลกำพร้า (Orphan Data) ในกรณีที่บาง Query ล้มเหลว
+- **Database Connection Pooling:** เนื่องจาก FreeRADIUS ยิงคำสั่งจำนวนมหาศาล ระบบเชื่อมต่อฐานข้อมูลต้องผ่าน Connection Pool เสมอ (เช่น ใช้ PgBouncer หรือ Pool ในระดับ Drizzle) ห้ามเปิด Connection ใหม่ตรงๆ ทุกครั้งที่มี Request เด็ดขาด

@@ -1,49 +1,45 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getFailedLogins = exports.getDashboardStats = void 0;
-const fastify_1 = require("fastify");
-const db_1 = require("../db");
-const tenants_1 = require("../schema/tenants");
-const freeradius_1 = require("../schema/freeradius");
-const drizzle_orm_1 = require("drizzle-orm");
-const getDashboardStats = async (request, reply) => {
+import { db } from "../db";
+import { tenants } from "../schema/tenants";
+import { radacct } from "../schema/freeradius";
+import { count, isNull, eq, sum, sql } from "drizzle-orm";
+export const getDashboardStats = async (request, reply) => {
     try {
         const user = request.user;
         // Total Tenants (Only Super Admins can see this across all, others see 1)
         let totalTenants = 1;
         if (user.role === 'super_admin') {
-            const tenantCount = await db_1.db.select({ count: (0, drizzle_orm_1.count)() }).from(tenants_1.tenants);
+            const tenantCount = await db.select({ count: count() }).from(tenants);
             totalTenants = tenantCount[0].count;
         }
         // Online Users (from radacct where acctstoptime is null)
-        let onlineUsersQuery = db_1.db
-            .select({ count: (0, drizzle_orm_1.count)() })
-            .from(freeradius_1.radacct)
-            .where((0, drizzle_orm_1.isNull)(freeradius_1.radacct.acctstoptime));
+        let onlineUsersQuery = db
+            .select({ count: count() })
+            .from(radacct)
+            .where(isNull(radacct.acctstoptime));
         // If not super admin, isolate by tenantId
         if (user.role !== 'super_admin') {
-            onlineUsersQuery = db_1.db
-                .select({ count: (0, drizzle_orm_1.count)() })
-                .from(freeradius_1.radacct)
-                .where((0, drizzle_orm_1.sql) `${freeradius_1.radacct.acctstoptime} IS NULL AND ${freeradius_1.radacct.tenantId} = ${user.tenantId}`);
+            onlineUsersQuery = db
+                .select({ count: count() })
+                .from(radacct)
+                .where(sql `${radacct.acctstoptime} IS NULL AND ${radacct.tenantId} = ${user.tenantId}`);
         }
         const onlineUsersRes = await onlineUsersQuery;
         const onlineUsers = onlineUsersRes[0].count;
         // Total Traffic (Sum of acctinputoctets and acctoutputoctets)
-        let trafficQuery = db_1.db
+        let trafficQuery = db
             .select({
-            download: (0, drizzle_orm_1.sum)(freeradius_1.radacct.acctoutputoctets).mapWith(Number), // NAS Output = User Download
-            upload: (0, drizzle_orm_1.sum)(freeradius_1.radacct.acctinputoctets).mapWith(Number), // NAS Input = User Upload
+            download: sum(radacct.acctoutputoctets).mapWith(Number), // NAS Output = User Download
+            upload: sum(radacct.acctinputoctets).mapWith(Number), // NAS Input = User Upload
         })
-            .from(freeradius_1.radacct);
+            .from(radacct);
         if (user.role !== 'super_admin') {
-            trafficQuery = db_1.db
+            trafficQuery = db
                 .select({
-                download: (0, drizzle_orm_1.sum)(freeradius_1.radacct.acctoutputoctets).mapWith(Number),
-                upload: (0, drizzle_orm_1.sum)(freeradius_1.radacct.acctinputoctets).mapWith(Number),
+                download: sum(radacct.acctoutputoctets).mapWith(Number),
+                upload: sum(radacct.acctinputoctets).mapWith(Number),
             })
-                .from(freeradius_1.radacct)
-                .where((0, drizzle_orm_1.eq)(freeradius_1.radacct.tenantId, user.tenantId));
+                .from(radacct)
+                .where(eq(radacct.tenantId, user.tenantId));
         }
         const trafficRes = await trafficQuery;
         const download = trafficRes[0]?.download || 0;
@@ -72,8 +68,7 @@ const getDashboardStats = async (request, reply) => {
         return reply.code(500).send({ error: "Internal Server Error" });
     }
 };
-exports.getDashboardStats = getDashboardStats;
-const getFailedLogins = async (request, reply) => {
+export const getFailedLogins = async (request, reply) => {
     try {
         const user = request.user;
         // MOCK DATA: Simulate Grafana Loki response
@@ -100,5 +95,4 @@ const getFailedLogins = async (request, reply) => {
         return reply.code(500).send({ error: "Failed to fetch logs from Loki" });
     }
 };
-exports.getFailedLogins = getFailedLogins;
 //# sourceMappingURL=dashboard.controller.js.map

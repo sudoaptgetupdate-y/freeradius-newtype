@@ -1,63 +1,59 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.getUsers = void 0;
-const fastify_1 = require("fastify");
-const db_1 = require("../db");
-const freeradius_1 = require("../schema/freeradius");
-const drizzle_orm_1 = require("drizzle-orm");
-const zod_1 = require("zod");
-const userSchema = zod_1.z.object({
-    username: zod_1.z.string().min(3),
-    password: zod_1.z.string().min(4),
-    profileName: zod_1.z.string().min(1),
-    tenantId: zod_1.z.string().optional(),
+import { db } from "../db";
+import { radcheck, radacct, radusergroup } from "../schema/freeradius";
+import { eq, and, isNull, not } from "drizzle-orm";
+import { z } from "zod";
+const userSchema = z.object({
+    username: z.string().min(3),
+    password: z.string().min(4),
+    profileName: z.string().min(1),
+    tenantId: z.string().optional(),
 });
-const userUpdateSchema = zod_1.z.object({
-    password: zod_1.z.string().min(4).optional(),
-    profileName: zod_1.z.string().min(1).optional(),
+const userUpdateSchema = z.object({
+    password: z.string().min(4).optional(),
+    profileName: z.string().min(1).optional(),
 });
-const getUsers = async (request, reply) => {
+export const getUsers = async (request, reply) => {
     try {
         const user = request.user;
         // Get unique usernames from radcheck (filtering by password attribute to avoid duplicates if possible)
-        let usersQuery = db_1.db
+        let usersQuery = db
             .select({
-            id: freeradius_1.radcheck.id,
-            username: freeradius_1.radcheck.username,
-            tenantId: freeradius_1.radcheck.tenantId,
+            id: radcheck.id,
+            username: radcheck.username,
+            tenantId: radcheck.tenantId,
         })
-            .from(freeradius_1.radcheck)
-            .where((0, drizzle_orm_1.eq)(freeradius_1.radcheck.attribute, 'Cleartext-Password'))
+            .from(radcheck)
+            .where(eq(radcheck.attribute, 'Cleartext-Password'))
             .limit(50); // Hardcoded limit for now to prevent massive scans
         if (user.role !== 'super_admin') {
-            usersQuery = db_1.db
+            usersQuery = db
                 .select({
-                id: freeradius_1.radcheck.id,
-                username: freeradius_1.radcheck.username,
-                tenantId: freeradius_1.radcheck.tenantId,
+                id: radcheck.id,
+                username: radcheck.username,
+                tenantId: radcheck.tenantId,
             })
-                .from(freeradius_1.radcheck)
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radcheck.attribute, 'Cleartext-Password'), (0, drizzle_orm_1.eq)(freeradius_1.radcheck.tenantId, user.tenantId)))
+                .from(radcheck)
+                .where(and(eq(radcheck.attribute, 'Cleartext-Password'), eq(radcheck.tenantId, user.tenantId)))
                 .limit(50);
         }
         const radcheckUsers = await usersQuery;
         // Now for each user, check if they are online in radacct
         // This is a naive approach (N+1), but acceptable for a quick 50-limit list without complex subqueries
         const userList = await Promise.all(radcheckUsers.map(async (u) => {
-            const activeSessionRes = await db_1.db
+            const activeSessionRes = await db
                 .select({
-                nasipaddress: freeradius_1.radacct.nasipaddress,
-                framedipaddress: freeradius_1.radacct.framedipaddress,
-                callingstationid: freeradius_1.radacct.callingstationid, // MAC Address usually
-                acctinputoctets: freeradius_1.radacct.acctinputoctets,
-                acctoutputoctets: freeradius_1.radacct.acctoutputoctets,
+                nasipaddress: radacct.nasipaddress,
+                framedipaddress: radacct.framedipaddress,
+                callingstationid: radacct.callingstationid, // MAC Address usually
+                acctinputoctets: radacct.acctinputoctets,
+                acctoutputoctets: radacct.acctoutputoctets,
             })
-                .from(freeradius_1.radacct)
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radacct.username, u.username), (0, drizzle_orm_1.eq)(freeradius_1.radacct.tenantId, u.tenantId), (0, drizzle_orm_1.isNull)(freeradius_1.radacct.acctstoptime)))
+                .from(radacct)
+                .where(and(eq(radacct.username, u.username), eq(radacct.tenantId, u.tenantId), isNull(radacct.acctstoptime)))
                 .limit(1);
             const activeSession = activeSessionRes[0];
             // Fetch user's profile
-            const profileRes = await db_1.db.select().from(freeradius_1.radusergroup).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radusergroup.username, u.username), (0, drizzle_orm_1.eq)(freeradius_1.radusergroup.tenantId, u.tenantId))).limit(1);
+            const profileRes = await db.select().from(radusergroup).where(and(eq(radusergroup.username, u.username), eq(radusergroup.tenantId, u.tenantId))).limit(1);
             const profileName = profileRes.length > 0 ? profileRes[0].groupname : "Default";
             if (activeSession) {
                 const download = Number(activeSession.acctoutputoctets || 0);
@@ -96,8 +92,7 @@ const getUsers = async (request, reply) => {
         return reply.code(500).send({ error: "Internal Server Error" });
     }
 };
-exports.getUsers = getUsers;
-const createUser = async (request, reply) => {
+export const createUser = async (request, reply) => {
     try {
         const user = request.user;
         const data = userSchema.parse(request.body);
@@ -106,12 +101,12 @@ const createUser = async (request, reply) => {
             return reply.status(400).send({ error: "Tenant ID is required" });
         }
         // Check duplicate
-        const existing = await db_1.db.select().from(freeradius_1.radcheck).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radcheck.tenantId, targetTenantId), (0, drizzle_orm_1.eq)(freeradius_1.radcheck.username, data.username))).limit(1);
+        const existing = await db.select().from(radcheck).where(and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, data.username))).limit(1);
         if (existing.length > 0) {
             return reply.status(409).send({ error: "Username already exists" });
         }
         // Insert into radcheck
-        await db_1.db.insert(freeradius_1.radcheck).values({
+        await db.insert(radcheck).values({
             tenantId: targetTenantId,
             username: data.username,
             attribute: "Cleartext-Password",
@@ -119,7 +114,7 @@ const createUser = async (request, reply) => {
             value: data.password
         });
         // Insert into radusergroup
-        await db_1.db.insert(freeradius_1.radusergroup).values({
+        await db.insert(radusergroup).values({
             tenantId: targetTenantId,
             username: data.username,
             groupname: data.profileName,
@@ -128,15 +123,14 @@ const createUser = async (request, reply) => {
         reply.status(201).send({ message: "User created successfully" });
     }
     catch (error) {
-        if (error instanceof zod_1.z.ZodError) {
+        if (error instanceof z.ZodError) {
             return reply.status(400).send({ error: "Validation error", details: error.errors });
         }
         request.log.error(error);
         reply.status(500).send({ error: "Internal Server Error" });
     }
 };
-exports.createUser = createUser;
-const updateUser = async (request, reply) => {
+export const updateUser = async (request, reply) => {
     try {
         const user = request.user;
         const { username } = request.params;
@@ -147,10 +141,10 @@ const updateUser = async (request, reply) => {
             return reply.status(400).send({ error: "Tenant ID is required" });
         }
         if (data.password) {
-            await db_1.db.update(freeradius_1.radcheck).set({ value: data.password }).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radcheck.tenantId, targetTenantId), (0, drizzle_orm_1.eq)(freeradius_1.radcheck.username, username), (0, drizzle_orm_1.eq)(freeradius_1.radcheck.attribute, "Cleartext-Password")));
+            await db.update(radcheck).set({ value: data.password }).where(and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username), eq(radcheck.attribute, "Cleartext-Password")));
         }
         if (data.profileName) {
-            await db_1.db.update(freeradius_1.radusergroup).set({ groupname: data.profileName }).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radusergroup.tenantId, targetTenantId), (0, drizzle_orm_1.eq)(freeradius_1.radusergroup.username, username)));
+            await db.update(radusergroup).set({ groupname: data.profileName }).where(and(eq(radusergroup.tenantId, targetTenantId), eq(radusergroup.username, username)));
         }
         reply.send({ message: "User updated successfully" });
     }
@@ -159,8 +153,7 @@ const updateUser = async (request, reply) => {
         reply.status(500).send({ error: "Internal Server Error" });
     }
 };
-exports.updateUser = updateUser;
-const deleteUser = async (request, reply) => {
+export const deleteUser = async (request, reply) => {
     try {
         const user = request.user;
         const { username } = request.params;
@@ -169,8 +162,8 @@ const deleteUser = async (request, reply) => {
         if (!targetTenantId) {
             return reply.status(400).send({ error: "Tenant ID is required" });
         }
-        await db_1.db.delete(freeradius_1.radcheck).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radcheck.tenantId, targetTenantId), (0, drizzle_orm_1.eq)(freeradius_1.radcheck.username, username)));
-        await db_1.db.delete(freeradius_1.radusergroup).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(freeradius_1.radusergroup.tenantId, targetTenantId), (0, drizzle_orm_1.eq)(freeradius_1.radusergroup.username, username)));
+        await db.delete(radcheck).where(and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username)));
+        await db.delete(radusergroup).where(and(eq(radusergroup.tenantId, targetTenantId), eq(radusergroup.username, username)));
         reply.send({ message: "User deleted successfully" });
     }
     catch (error) {
@@ -178,5 +171,4 @@ const deleteUser = async (request, reply) => {
         reply.status(500).send({ error: "Internal Server Error" });
     }
 };
-exports.deleteUser = deleteUser;
 //# sourceMappingURL=users.controller.js.map

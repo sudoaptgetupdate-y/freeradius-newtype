@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import { Users, Server, Activity, ArrowUpRight, Ticket, CheckCircle2, AlertTriangle, Zap, UserX } from "lucide-react"
+import { Users, Server, Activity, ArrowUpRight, Ticket, CheckCircle2, AlertTriangle, Zap, UserX, CalendarIcon, Download } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { NetworkTrafficChart } from "@/components/network-traffic-chart"
@@ -50,81 +50,140 @@ function MasterDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">{t('dashboard.masterTitle')}</h2>
-        <p className="text-muted-foreground">{t('dashboard.masterSubtitle')}</p>
+      {/* Dashboard Header Style */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">{t('dashboard.masterTitle')}</h2>
+          <p className="text-[15px] text-muted-foreground mt-1">{t('dashboard.masterSubtitle')}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="hidden sm:flex h-10 px-4 rounded-xl border-border bg-card text-foreground shadow-sm font-medium hover:bg-accent/50 hover:text-primary transition-colors">
+            <CalendarIcon className="mr-2 h-[18px] w-[18px] text-primary" />
+            Jan 20, 2026 - Feb 09, 2026
+          </Button>
+          <Button className="h-10 px-4 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors">
+            <Download className="mr-2 h-[18px] w-[18px]" />
+            Download
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Total Tenants */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.totalTenants')}
-            </CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTenants}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-emerald-500 inline-flex items-center">
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.totalTenants')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.totalTenants}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                <Server className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-emerald-500 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
                 <ArrowUpRight className="mr-1 h-3 w-3" />
                 +2
-              </span>{" "}
-              {t('dashboard.totalTenantsDesc')}
-            </p>
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">{t('dashboard.totalTenantsDesc')}</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Online Users */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.onlineUsers')}
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.onlineUsers}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('dashboard.onlineUsersMasterDesc')}
-            </p>
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.onlineUsers')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.onlineUsers}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#49beff]/10 flex items-center justify-center shrink-0">
+                <Users className="h-6 w-6 text-secondary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-emerald-500 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +12%
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">{t('dashboard.onlineUsersMasterDesc')}</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Network Traffic */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.networkTraffic')}
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.trafficGB}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('dashboard.networkTrafficMasterDesc')}
-            </p>
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.networkTraffic')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.trafficGB}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#13deb9]/10 flex items-center justify-center shrink-0">
+                <Activity className="h-6 w-6 text-[#13deb9]" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-[#13deb9] font-semibold bg-[#13deb9]/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +8%
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">{t('dashboard.networkTrafficMasterDesc')}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Vouchers */}
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">Active Vouchers</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.activeVouchers || 1240}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f6b51e]/10 flex items-center justify-center shrink-0">
+                <Ticket className="h-6 w-6 text-[#f6b51e]" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-[#f6b51e] font-semibold bg-[#f6b51e]/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +145
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">from last month</span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
         {/* Network Traffic Chart */}
-        <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>{t('dashboard.globalTrafficTitle')}</CardTitle>
-            <CardDescription>
+        <Card className="col-span-1 md:col-span-2 lg:col-span-3 border-none shadow-md">
+          <CardHeader className="px-6 py-5 border-b border-border/50">
+            <CardTitle className="text-lg">{t('dashboard.globalTrafficTitle')}</CardTitle>
+            <CardDescription className="text-muted-foreground">
               {t('dashboard.globalTrafficDesc')}
             </CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
-            <NetworkTrafficChart />
+          <CardContent className="p-6">
+            <div className="h-[350px]">
+              <NetworkTrafficChart />
+            </div>
           </CardContent>
         </Card>
         
         <div className="col-span-1">
-          <FailedLoginsList />
+          <div className="bg-card rounded-xl shadow-md h-full overflow-hidden border-none">
+            <div className="px-6 py-5 border-b border-border/50">
+              <h3 className="font-semibold text-lg text-foreground">Security Log</h3>
+              <p className="text-sm text-muted-foreground mt-1">Failed authentication attempts</p>
+            </div>
+            <div className="p-0">
+              <FailedLoginsList />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -156,118 +215,138 @@ function TenantDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Dashboard Header Style for Tenant */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t('dashboard.tenantTitle', { name: user?.name || "Your Site" })}</h2>
-          <p className="text-muted-foreground">{t('dashboard.tenantSubtitle')}</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">{t('dashboard.tenantTitle', { name: user?.name || "Your Site" })}</h2>
+          <p className="text-[15px] text-muted-foreground mt-1">{t('dashboard.tenantSubtitle')}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-            <UserX className="mr-2 h-4 w-4" />
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="hidden sm:flex h-10 px-4 rounded-xl border-border bg-card text-destructive shadow-sm font-medium hover:bg-destructive/10 hover:text-destructive transition-colors">
+            <UserX className="mr-2 h-[18px] w-[18px]" />
             {t('dashboard.disconnectAll')}
           </Button>
-          <Button>
-            <Zap className="mr-2 h-4 w-4" />
+          <Button className="h-10 px-4 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors">
+            <Zap className="mr-2 h-[18px] w-[18px]" />
             {t('dashboard.generateVouchers')}
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Router Status */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.routerStatus')}
-            </CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {stats.routerStatus === "online" ? (
-              <>
-                <div className="text-2xl font-bold text-emerald-500">{t('dashboard.routerOnline')}</div>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                  <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-500" />
-                  {t('dashboard.routerOnlineDesc')}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-destructive">{t('dashboard.routerOffline')}</div>
-                <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                  <AlertTriangle className="mr-1 h-3 w-3 text-destructive" />
-                  {t('dashboard.routerOfflineDesc')}
-                </p>
-              </>
-            )}
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.routerStatus')}</p>
+                {stats.routerStatus === "online" ? (
+                  <h3 className="text-3xl font-bold text-[#13deb9]">{t('dashboard.routerOnline')}</h3>
+                ) : (
+                  <h3 className="text-3xl font-bold text-[#ef4444]">{t('dashboard.routerOffline')}</h3>
+                )}
+              </div>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${stats.routerStatus === 'online' ? 'bg-[#13deb9]/10' : 'bg-[#ef4444]/10'}`}>
+                <Server className={`h-6 w-6 ${stats.routerStatus === 'online' ? 'text-[#13deb9]' : 'text-[#ef4444]'}`} />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+               {stats.routerStatus === "online" ? (
+                  <>
+                    <CheckCircle2 className="mr-1 h-[18px] w-[18px] text-[#13deb9]" />
+                    <span className="text-muted-foreground ml-1 text-[13px]">{t('dashboard.routerOnlineDesc')}</span>
+                  </>
+               ) : (
+                  <>
+                    <AlertTriangle className="mr-1 h-[18px] w-[18px] text-[#ef4444]" />
+                    <span className="text-muted-foreground ml-1 text-[13px]">{t('dashboard.routerOfflineDesc')}</span>
+                  </>
+               )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Online Users */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.onlineUsers')}
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.onlineUsers}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('dashboard.onlineUsersTenantDesc')}
-            </p>
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.onlineUsers')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.onlineUsers}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#49beff]/10 flex items-center justify-center shrink-0">
+                <Users className="h-6 w-6 text-secondary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+               <span className="text-muted-foreground text-[13px]">{t('dashboard.onlineUsersTenantDesc')}</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Active Vouchers */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.activeVouchers')}
-            </CardTitle>
-            <Ticket className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeVouchers}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('dashboard.activeVouchersDesc')}
-            </p>
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.activeVouchers')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.activeVouchers}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f6b51e]/10 flex items-center justify-center shrink-0">
+                <Ticket className="h-6 w-6 text-[#f6b51e]" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="text-muted-foreground text-[13px]">{t('dashboard.activeVouchersDesc')}</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Network Traffic */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t('dashboard.networkTraffic')}
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.trafficGB}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('dashboard.networkTrafficTenantDesc')}
-            </p>
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.networkTraffic')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.trafficGB}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#5d87ff]/10 flex items-center justify-center shrink-0">
+                <Activity className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="text-muted-foreground text-[13px]">{t('dashboard.networkTrafficTenantDesc')}</span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
         {/* Network Traffic Chart */}
-        <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>{t('dashboard.siteTrafficTitle')}</CardTitle>
-            <CardDescription>
+        <Card className="col-span-1 md:col-span-2 lg:col-span-3 border-none shadow-md">
+          <CardHeader className="px-6 py-5 border-b border-border/50">
+            <CardTitle className="text-lg">{t('dashboard.siteTrafficTitle')}</CardTitle>
+            <CardDescription className="text-muted-foreground">
               {t('dashboard.siteTrafficDesc')}
             </CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
-            <NetworkTrafficChart />
+          <CardContent className="p-6">
+             <div className="h-[350px]">
+               <NetworkTrafficChart />
+             </div>
           </CardContent>
         </Card>
 
         <div className="col-span-1">
-          <FailedLoginsList />
+          <div className="bg-card rounded-xl shadow-md h-full overflow-hidden border-none">
+            <div className="px-6 py-5 border-b border-border/50">
+              <h3 className="font-semibold text-lg text-foreground">Security Log</h3>
+              <p className="text-sm text-muted-foreground mt-1">Failed authentication attempts</p>
+            </div>
+            <div className="p-0">
+              <FailedLoginsList />
+            </div>
+          </div>
         </div>
       </div>
     </div>

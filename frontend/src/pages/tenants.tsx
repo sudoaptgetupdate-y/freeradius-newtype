@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Plus, Edit, Trash2, Building2, Loader2, Mail, Key, Users, Power, PowerOff } from "lucide-react"
+import { Search, Plus, Edit, Building2, Loader2, Mail, Key, Users, Power, PowerOff, Server } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
@@ -9,7 +9,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationLink,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import {
   Dialog,
   DialogContent,
@@ -143,7 +157,7 @@ export default function TenantsPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex flex-col min-h-[calc(100vh-120px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">{t('tenants.title')}</h2>
@@ -155,20 +169,20 @@ export default function TenantsPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="flex-1 flex flex-col shadow-sm border-border/50">
         <CardHeader className="pb-3 px-4 sm:px-6">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder={t('tenants.search')}
-              className="pl-9"
+              className="pl-9 bg-accent/30 border-transparent focus-visible:bg-background h-10 rounded-lg"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="rounded-md border overflow-x-auto">
+        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col flex-1">
+          <div className="rounded-xl border border-border/50 overflow-x-auto bg-background/50">
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -230,122 +244,149 @@ export default function TenantsPage() {
               </TableBody>
             </Table>
           </div>
+          
+          <div className="mt-auto pt-6 pb-2">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious href="#" onClick={(e) => e.preventDefault()} className="hover:bg-accent hover:text-accent-foreground" />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationLink href="#" isActive className="shadow-sm">1</PaginationLink>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationLink href="#" onClick={(e) => e.preventDefault()}>2</PaginationLink>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext href="#" onClick={(e) => e.preventDefault()} className="hover:bg-accent hover:text-accent-foreground" />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-foreground [&>button]:hover:bg-muted [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
-          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-6 border-b border-border bg-muted/30">
-            <DialogTitle className="flex items-center gap-2 text-[20px] sm:text-[22px] font-bold">
-              <div className="bg-primary/10 p-2 rounded-full">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
+        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
               {editingTenantId ? "Edit Tenant" : t('tenants.addTenant')}
             </DialogTitle>
-            <DialogDescription className="text-[13px] sm:text-[14px]">
+            <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
               {editingTenantId ? "Update tenant site limits and status." : "Create a new tenant site and set their limits. An admin account will be generated."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateTenant} className="flex flex-col h-full">
-            <div className="grid gap-6 px-5 sm:px-7 py-4 flex-1 overflow-y-auto">
+          <form onSubmit={handleCreateTenant} className="flex flex-col flex-1 min-h-0">
+            <div className="grid gap-4 px-5 sm:px-7 py-4 flex-1 overflow-y-auto">
               
               <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-1 border-b">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Site Details</h3>
-                </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-sm font-semibold">{t('tenants.colName')}</Label>
-                  <Input 
-                    id="name" 
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                    placeholder="e.g. Branch A Hotel" 
-                    required 
-                  />
+                  <Label htmlFor="name" className="text-[14px] font-semibold text-foreground">{t('tenants.colName')}</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="name" 
+                      value={formData.name} 
+                      onChange={e => setFormData({...formData, name: e.target.value})} 
+                      placeholder="e.g. Branch A Hotel" 
+                      required 
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="maxUsers" className="text-sm font-semibold flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-blue-500" />
+                    <Label htmlFor="maxUsers" className="text-[14px] font-semibold text-foreground">
                       Max Users
                     </Label>
-                    <Input 
-                      id="maxUsers" 
-                      type="number"
-                      min="1"
-                      value={formData.maxUsers} 
-                      onChange={e => setFormData({...formData, maxUsers: parseInt(e.target.value) || 100})} 
-                      required 
-                    />
+                    <div className="relative">
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="maxUsers" 
+                        type="number"
+                        min="1"
+                        value={formData.maxUsers} 
+                        onChange={e => setFormData({...formData, maxUsers: parseInt(e.target.value) || 100})} 
+                        required 
+                        className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="maxNas" className="text-sm font-semibold flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-purple-500" />
+                    <Label htmlFor="maxNas" className="text-[14px] font-semibold text-foreground">
                       Max NAS
                     </Label>
-                    <Input 
-                      id="maxNas" 
-                      type="number"
-                      min="1"
-                      value={formData.maxNas} 
-                      onChange={e => setFormData({...formData, maxNas: parseInt(e.target.value) || 1})} 
-                      required 
-                    />
+                    <div className="relative">
+                      <Server className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="maxNas" 
+                        type="number"
+                        min="1"
+                        value={formData.maxNas} 
+                        onChange={e => setFormData({...formData, maxNas: parseInt(e.target.value) || 1})} 
+                        required 
+                        className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                      />
+                    </div>
                   </div>
                 </div>
                 {editingTenantId && (
                   <div className="space-y-1.5 mt-2">
-                    <Label htmlFor="status" className="text-sm font-semibold flex items-center gap-1.5">
-                      <Power className="h-3.5 w-3.5 text-rose-500" />
+                    <Label htmlFor="status" className="text-[14px] font-semibold text-foreground">
                       Status
                     </Label>
-                    <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Power className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
+                        <SelectTrigger id="status" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 )}
               </div>
 
               {!editingTenantId && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-1 border-b">
-                    <Key className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Admin Account</h3>
-                  </div>
+                  <div className="h-[1px] bg-border w-full" />
                 <div className="space-y-1.5">
-                  <Label htmlFor="adminEmail" className="text-sm font-semibold flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5 text-orange-500" />
+                  <Label htmlFor="adminEmail" className="text-[14px] font-semibold text-foreground">
                     Admin Email
                   </Label>
-                  <Input 
-                    id="adminEmail" 
-                    type="email"
-                    value={formData.adminEmail} 
-                    onChange={e => setFormData({...formData, adminEmail: e.target.value})} 
-                    placeholder="admin@tenant.com" 
-                    required 
-                  />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="adminEmail" 
+                      type="email"
+                      value={formData.adminEmail} 
+                      onChange={e => setFormData({...formData, adminEmail: e.target.value})} 
+                      placeholder="admin@tenant.com" 
+                      required 
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="adminPassword" className="text-sm font-semibold flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5 text-emerald-500" />
+                  <Label htmlFor="adminPassword" className="text-[14px] font-semibold text-foreground">
                     Temporary Password
                   </Label>
-                  <Input 
-                    id="adminPassword" 
-                    type="text"
-                    value={formData.adminPassword} 
-                    onChange={e => setFormData({...formData, adminPassword: e.target.value})} 
-                    placeholder="password123" 
-                    required 
-                  />
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="adminPassword" 
+                      type="text"
+                      value={formData.adminPassword} 
+                      onChange={e => setFormData({...formData, adminPassword: e.target.value})} 
+                      placeholder="password123" 
+                      required 
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
                 </div>
               </div>
               )}
@@ -354,7 +395,7 @@ export default function TenantsPage() {
               <Button type="button" variant="outline" className="w-full sm:w-auto h-[44px] px-5 rounded-[8px]" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20">
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingTenantId ? "Update Tenant" : "Save Tenant & Account"}
               </Button>

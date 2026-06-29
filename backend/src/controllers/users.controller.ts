@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
 import { radcheck, radacct, radusergroup } from "../schema/freeradius";
 import { eq, and, isNull, not } from "drizzle-orm";

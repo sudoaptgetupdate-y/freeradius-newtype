@@ -1,8 +1,10 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
 import { nas } from "../schema/nas";
 import { eq, and, or, not } from "drizzle-orm";
 import { z } from "zod";
+import { MikrotikService } from "../services/mikrotik.service";
+import { RadiusCoAService } from "../services/radius-coa.service";
 
 const nasSchema = z.object({
   nasname: z.string().max(128),
@@ -160,3 +162,123 @@ export const deleteNas = async (request: FastifyRequest<{ Params: { id: string }
     reply.status(500).send({ error: "Failed to delete NAS" });
   }
 };
+
+export const getNasStatus = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  try {
+    const user = request.user as any;
+    const { id } = request.params;
+    
+    const query = user.role === "super_admin" || user.role === "admin"
+      ? eq(nas.id, parseInt(id))
+      : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+      
+    const [targetNas] = await db.select().from(nas).where(query).limit(1);
+
+    if (!targetNas) {
+      return reply.status(404).send({ error: "NAS not found or access denied" });
+    }
+
+    if (targetNas.type !== "mikrotik") {
+      return reply.status(400).send({ error: "Status check only supported for Mikrotik devices" });
+    }
+
+    if (!targetNas.apiUsername || !targetNas.apiPasswordEncrypted) {
+      return reply.status(400).send({ error: "Mikrotik API credentials not configured for this NAS" });
+    }
+
+    const status = await MikrotikService.getSystemResource({
+      ip: targetNas.nasname,
+      username: targetNas.apiUsername,
+      password: targetNas.apiPasswordEncrypted,
+    });
+
+    reply.send({ success: true, data: status });
+  } catch (error: any) {
+    request.log.error(error);
+    reply.status(500).send({ error: "Failed to fetch NAS status", message: error.message });
+  }
+};
+
+export const getNasDhcp = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  try {
+    const user = request.user as any;
+    const { id } = request.params;
+    
+    const query = user.role === "super_admin" || user.role === "admin"
+      ? eq(nas.id, parseInt(id))
+      : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+      
+    const [targetNas] = await db.select().from(nas).where(query).limit(1);
+
+    if (!targetNas) {
+      return reply.status(404).send({ error: "NAS not found or access denied" });
+    }
+
+    if (targetNas.type !== "mikrotik") {
+      return reply.status(400).send({ error: "DHCP leases only supported for Mikrotik devices" });
+    }
+
+    if (!targetNas.apiUsername || !targetNas.apiPasswordEncrypted) {
+      return reply.status(400).send({ error: "Mikrotik API credentials not configured for this NAS" });
+    }
+
+    const leases = await MikrotikService.getDhcpLeases({
+      ip: targetNas.nasname,
+      username: targetNas.apiUsername,
+      password: targetNas.apiPasswordEncrypted,
+    });
+
+    reply.send({ success: true, data: leases });
+  } catch (error: any) {
+    request.log.error(error);
+    reply.status(500).send({ error: "Failed to fetch DHCP leases", message: error.message });
+  }
+};
+
+export const kickNasUser = async (request: FastifyRequest<{ Params: { id: string }, Body: { username: string } }>, reply: FastifyReply) => {
+  try {
+    const user = request.user as any;
+    const { id } = request.params;
+    
+    const { username } = z.object({ username: z.string() }).parse(request.body);
+    
+    const query = user.role === "super_admin" || user.role === "admin"
+      ? eq(nas.id, parseInt(id))
+      : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+      
+    const [targetNas] = await db.select().from(nas).where(query).limit(1);
+
+    if (!targetNas) {
+      return reply.status(404).send({ error: "NAS not found or access denied" });
+    }
+
+    // Attempt RADIUS CoA Disconnect
+    const success = await RadiusCoAService.disconnectUser({
+      ip: targetNas.nasname,
+      secret: targetNas.secret,
+      port: 3799
+    }, username);
+
+    if (success) {
+      return reply.send({ success: true, message: `Successfully sent Disconnect-Request for user ${username}` });
+    } else {
+      // If CoA fails, optionally try REST API kick if Mikrotik credentials exist
+      if (targetNas.type === "mikrotik" && targetNas.apiUsername && targetNas.apiPasswordEncrypted) {
+        const fallbackRes = await MikrotikService.kickHotspotUser({
+          ip: targetNas.nasname,
+          username: targetNas.apiUsername,
+          password: targetNas.apiPasswordEncrypted
+        }, username);
+        return reply.send(fallbackRes);
+      }
+      return reply.status(500).send({ success: false, error: "Failed to disconnect user via RADIUS CoA and no API fallback available" });
+    }
+  } catch (error: any) {
+    request.log.error(error);
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: "Validation error", details: error.errors });
+    }
+    reply.status(500).send({ error: "Failed to kick user", message: error.message });
+  }
+};
+

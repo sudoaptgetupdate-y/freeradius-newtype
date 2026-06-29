@@ -6,7 +6,8 @@ export const admins = pgTable("admins", {
   tenantId: uuid("tenant_id").references(() => tenants.id), // Nullable for Super Admin
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-  role: varchar("role", { enum: ["super_admin", "tenant_admin", "tenant_staff"] }).notNull(),
+  role: varchar("role", { enum: ["super_admin", "master_staff", "tenant_admin", "tenant_staff"] }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });

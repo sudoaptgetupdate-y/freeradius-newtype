@@ -23,3 +23,6 @@ description: Guidelines for communicating with Mikrotik devices, handling CoA, D
 
 ## 4. Security
 - รหัสผ่านที่เก็บในฐานข้อมูลเพื่อเชื่อมต่อ Mikrotik (API Password, RADIUS Secret) ต้องเข้ารหัส (Encrypted) เสมอ
+
+## 5. Live Testing Environment
+- **พร้อมทดสอบจริงเสมอ:** ปัจจุบัน User มีอุปกรณ์ Mikrotik ของจริงที่ผูก RADIUS เรียบร้อยแล้วที่ IP `10.0.0.1` พร้อมกับมี Client Computer รอเชื่อมต่อ หากถึงขั้นตอนไหนที่คุณ (AI) ต้องการทดสอบให้ทำงานได้อย่างสมบูรณ์แบบ สามารถบอกให้ User ทำการทดสอบ Login / Disconnect / หรือยิง API เพื่อเช็คผลลัพธ์หน้างานได้ทันที!

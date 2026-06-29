@@ -8,7 +8,7 @@
 1. **Requirements & Architecture (Phase 1):**
    - `docs/system_requirements.md`: Finalized (Multi-Tenancy, 802.1X, Telegram Bot, Soft Delete policies, Log Housekeeping).
    - `docs/architecture_design.md`: Finalized (PostgreSQL + Loki + Vector, Dual-Mode RadSec).
-   - `docs/user_manual.md`: Finalized (Master Admin, Tenant Admin, End-User Self-Care).
+   - `docs/product_features_and_roles.md`: Finalized (Master Admin, Tenant Admin, End-User Self-Care).
 2. **Backend Scaffolding & Database Schema (Phase 2):**
    - Initialized `backend` directory (Node.js, Fastify, TypeScript).
    - Created Drizzle ORM schemas (`tenants.ts`, `admins.ts`, `nas.ts`, `freeradius.ts`, `mac_bypass.ts`, `vouchers.ts`).
@@ -55,7 +55,11 @@
       - Integrated Shadcn `Sheet` for a slide-out mobile navigation Sidebar.
       - Wrapped all data tables with `overflow-x-auto` to allow swipeable horizontal scrolling.
       - Stacked form grid layouts into a single column (`grid-cols-1`) on mobile.
-12. **Git & Deployment Preparation:**
+12. **Admins Management (Phase 11):**
+    - Created backend API (`admins.controller`, `admins.routes`) with role-based restrictions.
+    - Implemented UI (`admins.tsx`) for Super Admins to manage system users and assign them to specific Tenants.
+    - Ensured `403 Forbidden` issues were resolved by creating valid `tenant_admin` users.
+13. **Git & Deployment Preparation:**
     - Established comprehensive root `.gitignore`.
     - Created `README.md` with complete installation instructions for new environments.
     - Initialized Git repo and pushed to `https://github.com/sudoaptgetupdate-y/freeradius-newtype.git`.
@@ -69,19 +73,33 @@
 ### 4. AI Guidelines:
    - Created `SKILL.md` enforcing Multi-Tenancy isolation, Soft Deletes, and Tech Stack.
 
-### ✅ MVP STATUS: COMPLETED
-- All phases from 1 to 10 have been successfully completed. 
-- The system is now ready to be deployed on the Production Ubuntu Server.
+### 🚧 MVP STATUS: IN PROGRESS (Missing Core Features)
+- Phase 1 to 11 have been successfully completed. 
+- However, several critical requirements from the SRS are still pending implementation to achieve true MVP for a SaaS Hotspot system.
 
-### 🎯 Next Steps (Post-MVP):
-1. **Server Deployment:** Install FreeRADIUS, PostgreSQL, Vector, and Loki on Ubuntu 24.04 and deploy the Next-Gen Backend & Frontend.
-2. **Hardware Integration:** Connect a real Mikrotik Router to verify CoA / Disconnect functionality.
+### 🎯 Next Steps & Pending Phases:
+1. **Phase 12: Vouchers & Queues (REQ-USER-04)**
+   - Implement backend logic (`vouchers.controller.ts`) for generating bulk internet vouchers.
+   - Build Frontend UI (`vouchers.tsx`) for managing and printing vouchers.
+2. **Phase 13: Captive Portal & Ads (REQ-PORTAL-01, 02)**
+   - Create public-facing Hotspot login pages with Dynamic Theme support based on `nas_mac`.
+   - Implement pre-login advertisement logic.
+3. **Phase 14: End-User Self-Care Portal (REQ-USER-05)**
+   - Build a dashboard for internet users to check quota, change passwords, and self-disconnect sessions via RADIUS CoA.
+4. **Phase 15: Telegram Bot Integration (REQ-SAAS-06)**
+   - Implement `webhooks.controller.ts` to send alerts (NAS offline, approval requests) to Telegram.
+5. **Phase 16: Walled Garden & MAB (REQ-MTK-03)**
+   - Implement UI for `mac_bypass` schema to manage IoT devices and Walled Garden lists.
+6. **Phase 17: True Grafana Loki Integration (REQ-LOG-01)**
+   - Replace the current "Mock" logs in the Dashboard with real LogQL queries to Grafana Loki.
+7. **Hardware Integration:**
+   - Connect a real Mikrotik Router to fully verify CoA / Disconnect functionality. (API status fetching has been verified).
 
 ## Project Structure
 - `/backend`: Node.js + Fastify + Drizzle ORM API.
 - `/docs/system_requirements.md`: Core SRS document.
 - `/docs/architecture_design.md`: Technical Architecture document.
-- `/docs/user_manual.md`: Operational Manual.
+- `/docs/product_features_and_roles.md`: Business Logic, Features and Roles mapping.
 - `/docs/freeradius_complete_setup_guide.md`: Installation Guide.
 - `/docs/freeradius_setup_recheck.md`: Post-Installation Verification.
 - `/.agents/skills/saas_freeradius/SKILL.md`: Strict coding guidelines for AI.

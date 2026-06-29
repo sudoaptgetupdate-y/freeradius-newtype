@@ -1,18 +1,16 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const db_1 = require("../src/db");
-const tenants_1 = require("../src/schema/tenants");
-const freeradius_1 = require("../src/schema/freeradius");
-const drizzle_orm_1 = require("drizzle-orm");
-const crypto_1 = require("crypto");
+import { db } from "../src/db";
+import { tenants } from "../src/schema/tenants";
+import { radcheck, radacct } from "../src/schema/freeradius";
+import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
 async function run() {
     console.log("Seeding dummy RADIUS data...");
     // 1. Get or create a tenant
-    let tenantRes = await db_1.db.select().from(tenants_1.tenants).limit(1);
+    let tenantRes = await db.select().from(tenants).limit(1);
     let tenantId;
     if (tenantRes.length === 0) {
         console.log("No tenant found. Creating a dummy admin tenant...");
-        const newTenant = await db_1.db.insert(tenants_1.tenants).values({
+        const newTenant = await db.insert(tenants).values({
             name: "Default SAAS Tenant",
             domain: "saas.local",
         }).returning();
@@ -31,12 +29,12 @@ async function run() {
     ];
     for (const user of mockUsers) {
         // Check if exists
-        const existing = await db_1.db
+        const existing = await db
             .select()
-            .from(freeradius_1.radcheck)
-            .where((0, drizzle_orm_1.eq)(freeradius_1.radcheck.username, user.username));
+            .from(radcheck)
+            .where(eq(radcheck.username, user.username));
         if (existing.length === 0) {
-            await db_1.db.insert(freeradius_1.radcheck).values({
+            await db.insert(radcheck).values({
                 tenantId,
                 username: user.username,
                 attribute: "Cleartext-Password",
@@ -48,10 +46,10 @@ async function run() {
     }
     // 3. Insert active and inactive sessions into radacct
     // Active session for john.doe
-    await db_1.db.insert(freeradius_1.radacct).values({
+    await db.insert(radacct).values({
         tenantId,
-        acctsessionid: (0, crypto_1.randomUUID)().substring(0, 32),
-        acctuniqueid: (0, crypto_1.randomUUID)().substring(0, 32),
+        acctsessionid: randomUUID().substring(0, 32),
+        acctuniqueid: randomUUID().substring(0, 32),
         username: "john.doe",
         nasipaddress: "10.0.0.1",
         framedipaddress: "192.168.1.10",
@@ -62,10 +60,10 @@ async function run() {
         acctoutputoctets: 2000000000, // 2 GB
     });
     // Active session for sarah.smith
-    await db_1.db.insert(freeradius_1.radacct).values({
+    await db.insert(radacct).values({
         tenantId,
-        acctsessionid: (0, crypto_1.randomUUID)().substring(0, 32),
-        acctuniqueid: (0, crypto_1.randomUUID)().substring(0, 32),
+        acctsessionid: randomUUID().substring(0, 32),
+        acctuniqueid: randomUUID().substring(0, 32),
         username: "sarah.smith",
         nasipaddress: "10.0.0.1",
         framedipaddress: "192.168.1.15",
@@ -76,10 +74,10 @@ async function run() {
         acctoutputoctets: 1800000000, // 1.8 GB
     });
     // Inactive session for emily.r
-    await db_1.db.insert(freeradius_1.radacct).values({
+    await db.insert(radacct).values({
         tenantId,
-        acctsessionid: (0, crypto_1.randomUUID)().substring(0, 32),
-        acctuniqueid: (0, crypto_1.randomUUID)().substring(0, 32),
+        acctsessionid: randomUUID().substring(0, 32),
+        acctuniqueid: randomUUID().substring(0, 32),
         username: "emily.r",
         nasipaddress: "10.0.0.1",
         framedipaddress: "192.168.1.99",

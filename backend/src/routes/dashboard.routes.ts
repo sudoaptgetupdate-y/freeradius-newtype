@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { getDashboardStats, getFailedLogins } from "../controllers/dashboard.controller";
 
 export const dashboardRoutes = async (fastify: FastifyInstance) => {

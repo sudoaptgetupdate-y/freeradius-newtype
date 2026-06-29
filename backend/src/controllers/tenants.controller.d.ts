@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyRequest, FastifyReply } from "fastify";
 export declare const getTenants: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 export declare const createTenant: (request: FastifyRequest, reply: FastifyReply) => Promise<undefined>;
 export declare const updateTenant: (request: FastifyRequest<{

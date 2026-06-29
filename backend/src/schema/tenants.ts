@@ -11,4 +11,5 @@ export const tenants = pgTable("tenants", {
   telegramEnabled: boolean("telegram_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });

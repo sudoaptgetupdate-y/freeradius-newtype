@@ -9,6 +9,7 @@ export const radcheck = pgTable("radcheck", {
   attribute: varchar("attribute", { length: 64 }).notNull(),
   op: varchar("op", { length: 2 }).notNull().default("=="),
   value: varchar("value", { length: 253 }).notNull(),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => {
   return {
     uniqueIdx: uniqueIndex("radcheck_unique_idx").on(table.tenantId, table.username, table.attribute),
@@ -85,4 +86,14 @@ export const radacct = pgTable("radacct", {
   servicetype: varchar("servicetype", { length: 32 }),
   framedprotocol: varchar("framedprotocol", { length: 32 }),
   framedipaddress: varchar("framedipaddress", { length: 15 }),
+});
+
+// radpostauth
+export const radpostauth = pgTable("radpostauth", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
+  username: varchar("username", { length: 64 }).notNull(),
+  pass: varchar("pass", { length: 64 }),
+  reply: varchar("reply", { length: 32 }),
+  authdate: timestamp("authdate").notNull().defaultNow(),
 });

@@ -1,32 +1,30 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteNas = exports.updateNas = exports.createNas = exports.getNasList = void 0;
-const fastify_1 = require("fastify");
-const db_1 = require("../db");
-const nas_1 = require("../schema/nas");
-const drizzle_orm_1 = require("drizzle-orm");
-const zod_1 = require("zod");
-const nasSchema = zod_1.z.object({
-    nasname: zod_1.z.string().max(128),
-    shortname: zod_1.z.string().max(32),
-    type: zod_1.z.string().max(30).default("other"),
-    secret: zod_1.z.string().max(60),
-    apiUsername: zod_1.z.string().max(255).optional(),
-    apiPasswordEncrypted: zod_1.z.string().max(512).optional(),
-    description: zod_1.z.string().max(200).optional(),
-    tenantId: zod_1.z.string().uuid().optional(),
+import { db } from "../db";
+import { nas } from "../schema/nas";
+import { eq, and, or, not } from "drizzle-orm";
+import { z } from "zod";
+import { MikrotikService } from "../services/mikrotik.service";
+import { RadiusCoAService } from "../services/radius-coa.service";
+const nasSchema = z.object({
+    nasname: z.string().max(128),
+    shortname: z.string().max(32),
+    type: z.string().max(30).default("other"),
+    secret: z.string().max(60),
+    apiUsername: z.string().max(255).optional(),
+    apiPasswordEncrypted: z.string().max(512).optional(),
+    description: z.string().max(200).optional(),
+    tenantId: z.string().uuid().optional(),
 });
-const getNasList = async (request, reply) => {
+export const getNasList = async (request, reply) => {
     try {
         const user = request.user;
         // Superadmin should view all NAS devices across all tenants.
         // Tenant Admin only views their own.
         let allNas;
         if (user.role === "super_admin" || user.role === "admin") {
-            allNas = await db_1.db.select().from(nas_1.nas);
+            allNas = await db.select().from(nas);
         }
         else {
-            allNas = await db_1.db.select().from(nas_1.nas).where((0, drizzle_orm_1.eq)(nas_1.nas.tenantId, user.tenantId));
+            allNas = await db.select().from(nas).where(eq(nas.tenantId, user.tenantId));
         }
         reply.send(allNas);
     }
@@ -35,8 +33,7 @@ const getNasList = async (request, reply) => {
         reply.status(500).send({ error: "Failed to fetch NAS devices" });
     }
 };
-exports.getNasList = getNasList;
-const createNas = async (request, reply) => {
+export const createNas = async (request, reply) => {
     try {
         const user = request.user;
         const data = nasSchema.parse(request.body);
@@ -45,14 +42,14 @@ const createNas = async (request, reply) => {
         }
         const tenantIdToUse = user.role === "super_admin" ? data.tenantId : user.tenantId;
         // Check for duplicates
-        const existingNas = await db_1.db.select().from(nas_1.nas).where((0, drizzle_orm_1.or)((0, drizzle_orm_1.eq)(nas_1.nas.nasname, data.nasname), (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(nas_1.nas.shortname, data.shortname), (0, drizzle_orm_1.eq)(nas_1.nas.tenantId, tenantIdToUse)))).limit(1);
+        const existingNas = await db.select().from(nas).where(or(eq(nas.nasname, data.nasname), and(eq(nas.shortname, data.shortname), eq(nas.tenantId, tenantIdToUse)))).limit(1);
         if (existingNas.length > 0) {
             if (existingNas[0].nasname === data.nasname) {
                 return reply.status(409).send({ error: "Conflict", message: "IP Address (NASName) already exists in the system" });
             }
             return reply.status(409).send({ error: "Conflict", message: "Shortname already exists in this tenant" });
         }
-        const [newNas] = await db_1.db.insert(nas_1.nas).values({
+        const [newNas] = await db.insert(nas).values({
             ...data,
             tenantId: tenantIdToUse
         }).returning();
@@ -60,14 +57,13 @@ const createNas = async (request, reply) => {
     }
     catch (error) {
         request.log.error(error);
-        if (error instanceof zod_1.z.ZodError) {
+        if (error instanceof z.ZodError) {
             return reply.status(400).send({ error: "Validation error", details: error.errors });
         }
         reply.status(500).send({ error: "Failed to create NAS" });
     }
 };
-exports.createNas = createNas;
-const updateNas = async (request, reply) => {
+export const updateNas = async (request, reply) => {
     try {
         const user = request.user;
         const { id } = request.params;
@@ -75,13 +71,13 @@ const updateNas = async (request, reply) => {
         // Check for duplicates on update
         if (data.nasname || data.shortname) {
             const currentNasQuery = user.role === "super_admin" || user.role === "admin"
-                ? (0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id))
-                : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id)), (0, drizzle_orm_1.eq)(nas_1.nas.tenantId, user.tenantId));
-            const currentNas = await db_1.db.select().from(nas_1.nas).where(currentNasQuery).limit(1);
+                ? eq(nas.id, parseInt(id))
+                : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+            const currentNas = await db.select().from(nas).where(currentNasQuery).limit(1);
             if (currentNas.length === 0) {
                 return reply.status(404).send({ error: "NAS not found or access denied" });
             }
-            const duplicateCheck = await db_1.db.select().from(nas_1.nas).where((0, drizzle_orm_1.and)((0, drizzle_orm_1.not)((0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id))), (0, drizzle_orm_1.or)(data.nasname ? (0, drizzle_orm_1.eq)(nas_1.nas.nasname, data.nasname) : undefined, data.shortname ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(nas_1.nas.shortname, data.shortname), (0, drizzle_orm_1.eq)(nas_1.nas.tenantId, currentNas[0].tenantId)) : undefined))).limit(1);
+            const duplicateCheck = await db.select().from(nas).where(and(not(eq(nas.id, parseInt(id))), or(data.nasname ? eq(nas.nasname, data.nasname) : undefined, data.shortname ? and(eq(nas.shortname, data.shortname), eq(nas.tenantId, currentNas[0].tenantId)) : undefined))).limit(1);
             if (duplicateCheck.length > 0) {
                 if (data.nasname && duplicateCheck[0].nasname === data.nasname) {
                     return reply.status(409).send({ error: "Conflict", message: "IP Address (NASName) already exists in the system" });
@@ -90,10 +86,10 @@ const updateNas = async (request, reply) => {
             }
         }
         const updateQuery = user.role === "super_admin" || user.role === "admin"
-            ? (0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id))
-            : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id)), (0, drizzle_orm_1.eq)(nas_1.nas.tenantId, user.tenantId));
-        const [updatedNas] = await db_1.db
-            .update(nas_1.nas)
+            ? eq(nas.id, parseInt(id))
+            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+        const [updatedNas] = await db
+            .update(nas)
             .set({ ...data, updatedAt: new Date() })
             .where(updateQuery)
             .returning();
@@ -104,14 +100,13 @@ const updateNas = async (request, reply) => {
     }
     catch (error) {
         request.log.error(error);
-        if (error instanceof zod_1.z.ZodError) {
+        if (error instanceof z.ZodError) {
             return reply.status(400).send({ error: "Validation error", details: error.errors });
         }
         reply.status(500).send({ error: "Failed to update NAS" });
     }
 };
-exports.updateNas = updateNas;
-const deleteNas = async (request, reply) => {
+export const deleteNas = async (request, reply) => {
     try {
         const user = request.user;
         const { id } = request.params;
@@ -120,10 +115,10 @@ const deleteNas = async (request, reply) => {
         // Wait, FreeRADIUS radacct uses `nasipaddress` string, not `nas.id`. So deleting NAS doesn't break radacct FKs.
         // We will do a hard delete for NAS since it's just the authentication configuration for FreeRADIUS.
         const deleteQuery = user.role === "super_admin" || user.role === "admin"
-            ? (0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id))
-            : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(nas_1.nas.id, parseInt(id)), (0, drizzle_orm_1.eq)(nas_1.nas.tenantId, user.tenantId));
-        const [deletedNas] = await db_1.db
-            .delete(nas_1.nas)
+            ? eq(nas.id, parseInt(id))
+            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+        const [deletedNas] = await db
+            .delete(nas)
             .where(deleteQuery)
             .returning();
         if (!deletedNas) {
@@ -136,5 +131,104 @@ const deleteNas = async (request, reply) => {
         reply.status(500).send({ error: "Failed to delete NAS" });
     }
 };
-exports.deleteNas = deleteNas;
+export const getNasStatus = async (request, reply) => {
+    try {
+        const user = request.user;
+        const { id } = request.params;
+        const query = user.role === "super_admin" || user.role === "admin"
+            ? eq(nas.id, parseInt(id))
+            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+        const [targetNas] = await db.select().from(nas).where(query).limit(1);
+        if (!targetNas) {
+            return reply.status(404).send({ error: "NAS not found or access denied" });
+        }
+        if (targetNas.type !== "mikrotik") {
+            return reply.status(400).send({ error: "Status check only supported for Mikrotik devices" });
+        }
+        if (!targetNas.apiUsername || !targetNas.apiPasswordEncrypted) {
+            return reply.status(400).send({ error: "Mikrotik API credentials not configured for this NAS" });
+        }
+        const status = await MikrotikService.getSystemResource({
+            ip: targetNas.nasname,
+            username: targetNas.apiUsername,
+            password: targetNas.apiPasswordEncrypted,
+        });
+        reply.send({ success: true, data: status });
+    }
+    catch (error) {
+        request.log.error(error);
+        reply.status(500).send({ error: "Failed to fetch NAS status", message: error.message });
+    }
+};
+export const getNasDhcp = async (request, reply) => {
+    try {
+        const user = request.user;
+        const { id } = request.params;
+        const query = user.role === "super_admin" || user.role === "admin"
+            ? eq(nas.id, parseInt(id))
+            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+        const [targetNas] = await db.select().from(nas).where(query).limit(1);
+        if (!targetNas) {
+            return reply.status(404).send({ error: "NAS not found or access denied" });
+        }
+        if (targetNas.type !== "mikrotik") {
+            return reply.status(400).send({ error: "DHCP leases only supported for Mikrotik devices" });
+        }
+        if (!targetNas.apiUsername || !targetNas.apiPasswordEncrypted) {
+            return reply.status(400).send({ error: "Mikrotik API credentials not configured for this NAS" });
+        }
+        const leases = await MikrotikService.getDhcpLeases({
+            ip: targetNas.nasname,
+            username: targetNas.apiUsername,
+            password: targetNas.apiPasswordEncrypted,
+        });
+        reply.send({ success: true, data: leases });
+    }
+    catch (error) {
+        request.log.error(error);
+        reply.status(500).send({ error: "Failed to fetch DHCP leases", message: error.message });
+    }
+};
+export const kickNasUser = async (request, reply) => {
+    try {
+        const user = request.user;
+        const { id } = request.params;
+        const { username } = z.object({ username: z.string() }).parse(request.body);
+        const query = user.role === "super_admin" || user.role === "admin"
+            ? eq(nas.id, parseInt(id))
+            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+        const [targetNas] = await db.select().from(nas).where(query).limit(1);
+        if (!targetNas) {
+            return reply.status(404).send({ error: "NAS not found or access denied" });
+        }
+        // Attempt RADIUS CoA Disconnect
+        const success = await RadiusCoAService.disconnectUser({
+            ip: targetNas.nasname,
+            secret: targetNas.secret,
+            port: 3799
+        }, username);
+        if (success) {
+            return reply.send({ success: true, message: `Successfully sent Disconnect-Request for user ${username}` });
+        }
+        else {
+            // If CoA fails, optionally try REST API kick if Mikrotik credentials exist
+            if (targetNas.type === "mikrotik" && targetNas.apiUsername && targetNas.apiPasswordEncrypted) {
+                const fallbackRes = await MikrotikService.kickHotspotUser({
+                    ip: targetNas.nasname,
+                    username: targetNas.apiUsername,
+                    password: targetNas.apiPasswordEncrypted
+                }, username);
+                return reply.send(fallbackRes);
+            }
+            return reply.status(500).send({ success: false, error: "Failed to disconnect user via RADIUS CoA and no API fallback available" });
+        }
+    }
+    catch (error) {
+        request.log.error(error);
+        if (error instanceof z.ZodError) {
+            return reply.status(400).send({ error: "Validation error", details: error.errors });
+        }
+        reply.status(500).send({ error: "Failed to kick user", message: error.message });
+    }
+};
 //# sourceMappingURL=nas.controller.js.map

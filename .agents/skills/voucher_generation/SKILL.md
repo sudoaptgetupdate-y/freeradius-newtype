@@ -22,3 +22,9 @@ description: Practices for handling heavy tasks like bulk voucher generation usi
 
 ## 4. Status Tracking
 - Frontend ควรกระพริบ (Polling) หรือรับผ่าน WebSocket/SSE เพื่อดึงสถานะความก้าวหน้าของ Job นั้น (เช่น "50% Complete", "Completed") และแสดงปุ่มดาวน์โหลดไฟล์ PDF เมื่อทำสำเร็จ
+
+---
+
+## 5. Job Queue Reliability (Enterprise Standards)
+- **Idempotency & Retries:** Background Job ทุกตัวต้องสามารถทำงานซ้ำได้โดยไม่พัง (Idempotent) หากระบบล่มกลางคันต้องมีกลไก Retry แบบทิ้งช่วง (Exponential Backoff)
+- **Dead Letter Queue (DLQ):** ห้ามปล่อยให้งานในคิว (Queue) วนลูปพังไปเรื่อยๆ หาก Job พังเกินจำนวนครั้งที่กำหนด (เช่น 3 ครั้ง) ให้ย้ายงานนั้นไปยัง Dead Letter Queue ทันทีเพื่อให้ Admin สามารถตรวจสอบข้อผิดพลาด (Stack Trace) ทีหลังได้

@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const fastify_plugin_1 = __importDefault(require("fastify-plugin"));
-const jwt_1 = __importDefault(require("@fastify/jwt"));
-const fastify_1 = require("fastify");
-exports.default = (0, fastify_plugin_1.default)(async (fastify) => {
-    fastify.register(jwt_1.default, {
+import fp from "fastify-plugin";
+import jwt from "@fastify/jwt";
+export default fp(async (fastify) => {
+    fastify.register(jwt, {
         secret: process.env.JWT_SECRET || "super-secret-default-key-change-in-prod",
     });
     fastify.decorate("authenticate", async (request, reply) => {

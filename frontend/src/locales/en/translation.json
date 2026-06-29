@@ -13,7 +13,8 @@
     "nas": "Routers / NAS",
     "settings": "Settings",
     "logout": "Logout",
-    "profiles": "Internet Packages"
+    "profiles": "Internet Packages",
+    "admins": "System Users"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -96,6 +97,16 @@
     "pagination": "Showing 1 to {{filtered}} of {{total}} entries",
     "prev": "Previous",
     "next": "Next"
+  },
+  "admins": {
+    "title": "System Users",
+    "subtitle": "Manage administrators and staff accounts.",
+    "addAdmin": "Add User",
+    "search": "Search users...",
+    "colEmail": "Email",
+    "colRole": "Role",
+    "colTenant": "Tenant Site",
+    "colActions": "Actions"
   },
   "common": {
     "loading": "Loading...",

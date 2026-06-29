@@ -9,4 +9,5 @@ export const macBypass = pgTable("mac_bypass", {
   description: varchar("description", { length: 255 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });

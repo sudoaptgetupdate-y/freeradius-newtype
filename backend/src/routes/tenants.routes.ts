@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { getTenants, createTenant, updateTenant, deleteTenant } from "../controllers/tenants.controller";
 
 export const tenantsRoutes = async (fastify: FastifyInstance) => {

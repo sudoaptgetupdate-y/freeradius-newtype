@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
 import { tenants } from "../schema/tenants";
 import { eq } from "drizzle-orm";

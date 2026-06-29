@@ -21,24 +21,24 @@ export function NetworkTrafficChart() {
         <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="colorDownload" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={isDark ? "#3b82f6" : "#2563eb"} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={isDark ? "#3b82f6" : "#2563eb"} stopOpacity={0} />
+              <stop offset="5%" stopColor="#5d87ff" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#5d87ff" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="colorUpload" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={isDark ? "#10b981" : "#059669"} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={isDark ? "#10b981" : "#059669"} stopOpacity={0} />
+              <stop offset="5%" stopColor="#49beff" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#49beff" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "#374151" : "#e5e7eb"} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "#333f55" : "#dfe5ef"} />
           <XAxis 
             dataKey="time" 
-            stroke={isDark ? "#9ca3af" : "#6b7280"} 
+            stroke={isDark ? "#7c8fac" : "#5a6a85"} 
             fontSize={12} 
             tickLine={false} 
             axisLine={false} 
           />
           <YAxis 
-            stroke={isDark ? "#9ca3af" : "#6b7280"} 
+            stroke={isDark ? "#7c8fac" : "#5a6a85"} 
             fontSize={12} 
             tickLine={false} 
             axisLine={false} 
@@ -46,17 +46,18 @@ export function NetworkTrafficChart() {
           />
           <Tooltip 
             contentStyle={{ 
-              backgroundColor: isDark ? "#1f2937" : "#ffffff",
-              borderColor: isDark ? "#374151" : "#e5e7eb",
-              borderRadius: "8px"
+              backgroundColor: isDark ? "#1c2536" : "#ffffff",
+              borderColor: isDark ? "#333f55" : "#dfe5ef",
+              borderRadius: "10px",
+              boxShadow: "0 1px 4px rgba(133, 146, 173, 0.2)"
             }}
-            itemStyle={{ color: isDark ? "#f3f4f6" : "#111827" }}
+            itemStyle={{ color: isDark ? "#ffffff" : "#1c2536" }}
           />
           <Area 
             type="monotone" 
             dataKey="download" 
             name="Download"
-            stroke={isDark ? "#3b82f6" : "#2563eb"} 
+            stroke="#5d87ff" 
             strokeWidth={2}
             fillOpacity={1} 
             fill="url(#colorDownload)" 
@@ -65,7 +66,7 @@ export function NetworkTrafficChart() {
             type="monotone" 
             dataKey="upload" 
             name="Upload"
-            stroke={isDark ? "#10b981" : "#059669"} 
+            stroke="#49beff" 
             strokeWidth={2}
             fillOpacity={1} 
             fill="url(#colorUpload)" 

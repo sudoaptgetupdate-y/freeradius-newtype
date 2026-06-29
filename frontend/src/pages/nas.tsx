@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Plus, Edit, Trash2, Server, Loader2, Router, Network, Tag, Key, Type } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Server, Loader2, Network, Tag, Key, Type, Building } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
@@ -36,6 +36,8 @@ type NasData = {
   shortname: string
   type: string
   secret: string
+  apiUsername?: string
+  apiPasswordEncrypted?: string
 }
 
 export default function NasPage() {
@@ -56,7 +58,9 @@ export default function NasPage() {
     shortname: "",
     type: "mikrotik",
     secret: "",
-    tenantId: ""
+    tenantId: "",
+    apiUsername: "",
+    apiPasswordEncrypted: ""
   })
 
   const fetchNas = async () => {
@@ -111,7 +115,7 @@ export default function NasPage() {
       }
       
       setIsDialogOpen(false)
-      setFormData({ nasname: "", shortname: "", type: "mikrotik", secret: "", tenantId: "" })
+      setFormData({ nasname: "", shortname: "", type: "mikrotik", secret: "", tenantId: "", apiUsername: "", apiPasswordEncrypted: "" })
       setEditingId(null)
       toast.success(editingId ? "NAS updated successfully!" : "NAS created successfully!")
       fetchNas() // Refresh list
@@ -126,7 +130,7 @@ export default function NasPage() {
 
   const handleOpenCreate = () => {
     setEditingId(null)
-    setFormData({ nasname: "", shortname: "", type: "mikrotik", secret: "", tenantId: "" })
+    setFormData({ nasname: "", shortname: "", type: "mikrotik", secret: "", tenantId: "", apiUsername: "", apiPasswordEncrypted: "" })
     setIsDialogOpen(true)
   }
 
@@ -137,7 +141,9 @@ export default function NasPage() {
       shortname: nas.shortname,
       type: nas.type || "other",
       secret: nas.secret || "",
-      tenantId: nas.tenantId || ""
+      tenantId: nas.tenantId || "",
+      apiUsername: nas.apiUsername || "",
+      apiPasswordEncrypted: nas.apiPasswordEncrypted || ""
     })
     setIsDialogOpen(true)
   }
@@ -169,6 +175,37 @@ export default function NasPage() {
     nas.nasname.toLowerCase().includes(searchQuery.toLowerCase()) || 
     nas.shortname.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handleTestApi = async (id: number) => {
+    try {
+      MySwal.fire({
+        title: 'Testing Connection...',
+        text: 'Please wait while we connect to the router API.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          MySwal.showLoading()
+        }
+      })
+      const response = await api.get(`/nas/${id}/status`)
+      const data = response.data.data
+      let info = "Connection Successful!"
+      if (data && data.uptime) {
+        info = `Uptime: ${data.uptime} | CPU Load: ${data['cpu-load']}% | Free Mem: ${(data['free-memory'] / 1024 / 1024).toFixed(2)} MB`
+      }
+      MySwal.fire({
+        title: 'Success!',
+        text: info,
+        icon: 'success'
+      })
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || "Connection failed"
+      MySwal.fire({
+        title: 'API Test Failed',
+        text: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
+        icon: 'error'
+      })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -243,6 +280,11 @@ export default function NasPage() {
                         <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteNas(nas.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        {nas.type === 'mikrotik' && (
+                          <Button variant="outline" size="sm" className="h-8 ml-2" onClick={() => handleTestApi(nas.id)}>
+                            Test API
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -254,74 +296,81 @@ export default function NasPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-foreground [&>button]:hover:bg-muted [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
-          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-6 border-b border-border bg-muted/30">
-            <DialogTitle className="flex items-center gap-2 text-[20px] sm:text-[22px] font-bold">
-              <div className="bg-primary/10 p-2 rounded-full">
-                <Router className="h-5 w-5 text-primary" />
-              </div>
+        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
               {editingId ? "Edit Router" : t('nas.addNas')}
             </DialogTitle>
-            <DialogDescription className="text-[13px] sm:text-[14px]">
+            <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
               {editingId ? "Update the connection details for this router." : "Enter the connection details for the new router."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateNas} className="flex flex-col h-full">
-            <div className="grid gap-5 px-5 sm:px-7 py-4 flex-1 overflow-y-auto">
+          <form onSubmit={handleCreateNas} className="flex flex-col flex-1 min-h-0">
+            <div className="grid gap-4 px-5 sm:px-7 py-4 flex-1 overflow-y-auto">
               {(user?.role === "super_admin" || user?.role === "admin") && (
                 <div className="space-y-2 bg-muted/30 p-3 rounded-lg border border-border/50">
-                  <Label htmlFor="tenant" className="text-xs font-semibold uppercase text-muted-foreground">Select Tenant</Label>
-                  <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val})}>
-                    <SelectTrigger id="tenant">
-                      <SelectValue placeholder="Select a tenant" />
-                    </SelectTrigger>
+                  <Label htmlFor="tenant" className="text-[14px] font-semibold text-foreground">Select Tenant</Label>
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val})}>
+                      <SelectTrigger id="tenant" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                        <SelectValue placeholder="Select a tenant" />
+                      </SelectTrigger>
                     <SelectContent>
                       {tenants.map(t => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  </div>
                 </div>
               )}
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="shortname" className="text-sm font-semibold flex items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 text-blue-500" />
+                    <Label htmlFor="shortname" className="text-[14px] font-semibold text-foreground">
                       {t('nas.colName')} (Shortname)
                     </Label>
-                    <Input 
-                      id="shortname" 
-                      value={formData.shortname} 
-                      onChange={e => setFormData({...formData, shortname: e.target.value})} 
-                      placeholder="e.g. Branch A Mikrotik" 
-                      required 
-                    />
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="shortname" 
+                        value={formData.shortname} 
+                        onChange={e => setFormData({...formData, shortname: e.target.value})} 
+                        placeholder="e.g. Branch A Mikrotik" 
+                        required 
+                        className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="nasname" className="text-sm font-semibold flex items-center gap-1.5">
-                      <Network className="h-3.5 w-3.5 text-purple-500" />
+                    <Label htmlFor="nasname" className="text-[14px] font-semibold text-foreground">
                       {t('nas.colIp')} (NASName)
                     </Label>
-                    <Input 
-                      id="nasname" 
-                      value={formData.nasname} 
-                      onChange={e => setFormData({...formData, nasname: e.target.value})} 
-                      placeholder="e.g. 192.168.1.1" 
-                      required 
-                    />
+                    <div className="relative">
+                      <Network className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="nasname" 
+                        value={formData.nasname} 
+                        onChange={e => setFormData({...formData, nasname: e.target.value})} 
+                        placeholder="e.g. 192.168.1.1" 
+                        required 
+                        className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="type" className="text-sm font-semibold flex items-center gap-1.5">
-                    <Type className="h-3.5 w-3.5 text-emerald-500" />
+                  <Label htmlFor="type" className="text-[14px] font-semibold text-foreground">
                     {t('nas.colType')} (Vendor)
                   </Label>
-                  <Select value={formData.type} onValueChange={(val) => setFormData({...formData, type: val})}>
-                    <SelectTrigger id="type">
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
+                  <div className="relative">
+                    <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Select value={formData.type} onValueChange={(val) => setFormData({...formData, type: val})}>
+                      <SelectTrigger id="type" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                        <SelectValue placeholder="Select vendor" />
+                      </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="mikrotik">Mikrotik</SelectItem>
                       <SelectItem value="fortigate">Fortigate</SelectItem>
@@ -329,29 +378,59 @@ export default function NasPage() {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="secret" className="text-sm font-semibold flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5 text-orange-500" />
+                  <Label htmlFor="secret" className="text-[14px] font-semibold text-foreground">
                     {t('nas.colSecret')} (RADIUS Secret)
                   </Label>
-                  <Input 
-                    id="secret" 
-                    type="password"
-                    value={formData.secret} 
-                    onChange={e => setFormData({...formData, secret: e.target.value})} 
-                    placeholder="Strong secret key" 
-                    required 
-                  />
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="secret" 
+                      type="password"
+                      value={formData.secret} 
+                      onChange={e => setFormData({...formData, secret: e.target.value})} 
+                      placeholder="Strong secret key" 
+                      required 
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
                 </div>
+
+                {formData.type === 'mikrotik' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/50 pt-4 mt-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="apiUsername" className="text-[14px] font-semibold text-foreground">API Username</Label>
+                      <Input 
+                        id="apiUsername" 
+                        value={formData.apiUsername} 
+                        onChange={e => setFormData({...formData, apiUsername: e.target.value})} 
+                        placeholder="Mikrotik user (e.g. api_user)" 
+                        className="h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="apiPassword" className="text-[14px] font-semibold text-foreground">API Password</Label>
+                      <Input 
+                        id="apiPassword" 
+                        type="password"
+                        value={formData.apiPasswordEncrypted} 
+                        onChange={e => setFormData({...formData, apiPasswordEncrypted: e.target.value})} 
+                        placeholder="Mikrotik password" 
+                        className="h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter className="px-5 sm:px-7 py-4 border-t border-border bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-auto">
               <Button type="button" variant="outline" className="w-full sm:w-auto h-[44px] px-5 rounded-[8px]" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20">
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingId ? "Update" : "Save"}
               </Button>

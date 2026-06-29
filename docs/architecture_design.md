@@ -106,19 +106,39 @@
 - **Toast Notifications:** ห้ามใช้ `alert()` หรือข้อความแจ้งเตือนที่แทรกใน DOM แบบธรรมดา ให้ใช้ไลบรารี **`react-toastify`** ในทุกกรณีสำหรับการแจ้งเตือนสถานะสำเร็จ (Success) หรือล้มเหลว (Error) ทั่วไป
 - **Confirmation Dialogs:** ห้ามใช้ `window.confirm()` แบบดั้งเดิมของเบราว์เซอร์ ให้ใช้ไลบรารี **`sweetalert2`** (`sweetalert2-react-content`) ในการสร้างกล่องโต้ตอบยืนยันการกระทำที่สำคัญทุกครั้ง (เช่น การลบข้อมูล หรือการระงับการใช้งาน)
 
-### 7.2 Dialog & Form Design Standard (มาตรฐานความสวยงามของฟอร์ม)
-เพื่อยกระดับ UI ให้ดู Premium และ Modern ทุกครั้งที่มีการสร้าง Dialog Form (เช่น Add/Edit Form) จะต้องยึดหลักการออกแบบดังนี้:
-1. **Animations & Glassmorphism:** Dialog และ SweetAlert2 ต้องมีฉากหลังที่เบลอ (ใช้ `backdrop-blur-sm` หรือ `backdrop-filter: blur(8px)`) พร้อมกับตั้งค่าเวลา Animation ให้สมูท (เช่น `duration-500`, `ease-out`, `slide-in-from-bottom-4`)
-2. **Icons & Headers:** หัวข้อ Dialog (`DialogTitle`) จะต้องมี **Icon** สื่อความหมายนำหน้าเสมอ (นำเข้าจาก `lucide-react`) พร้อมตกแต่งกรอบ Icon ให้ดูมีมิติ เช่น `bg-primary/10 p-2 rounded-full` และมีเส้นคั่นเนื้อหากับปุ่มกด (Divider) ยกเว้นในกรณีที่ต้องการเน้นความโดดเด่นอาจใช้พื้นหลังสีเข้ม (เช่น Midnight Slate) แทนได้
-3. **Input Styling:** ฟิลด์กรอกข้อมูลแบบต่างๆ (Input, Select) ควรมีการจัดกลุ่ม (Grid) อย่างเป็นระเบียบ และตัว `Label` ควรมี Icon สื่อความหมายประกอบด้วยเสมอ ส่วนพื้นหลัง Input ให้ใช้โทนกึ่งโปร่งแสง (Tinted) เช่น `bg-background/50 hover:bg-background/80` เพื่อความสวยงาม
-4. **Mobile Responsiveness:** แบบฟอร์มและ Dialog ทั้งหมดต้องถูกออกแบบมาในลักษณะ Mobile-First และปรับหน้าจอให้สมบูรณ์บนสมาร์ทโฟนเสมอ:
-   - **Dialog Width & Padding:** ใช้ความกว้างเกือบเต็มจอ (`w-[95vw] sm:max-w-[...]`) และปรับลด Padding ให้เล็กลงเมื่ออยู่บนมือถือ (`px-5 sm:px-8`)
-   - **Grid System:** โครงสร้างข้อมูลที่ขนานกัน (Side-by-side) จะต้องถูกบีบให้ซ้อนกันแนวตั้งบนจอมือถือ (`grid-cols-1 sm:grid-cols-2`)
-   - **Touch Targets:** ปุ่มกด (Buttons) ใน Footer หรือส่วนสำคัญ ให้ขยายเต็มความกว้างหน้าจอ (`w-full sm:w-auto`) และเรียงซ้อนกันแนวตั้ง (`flex-col-reverse sm:flex-row`) บนหน้าจอมือถือ เพื่อให้กดด้วยนิ้วหัวแม่มือได้ง่าย
-   - **Tables:** ตารางที่มีข้อมูลหลายคอลัมน์ จะต้องมี `overflow-x-auto` หุ้มไว้เสมอ และกำหนด `min-w-[...]` ให้ตาราง เพื่อให้สามารถปัดเลื่อนซ้าย-ขวาบนจอมือถือได้โดยไม่บีบข้อมูลจนเสียรูปแบบ
+### 7.2 Dialog & Form Design Standard (มาตรฐาน Tailwind-Admin UI)
+เพื่อความสะอาดตา (Clean & Professional) และสอดคล้องกับธีม **Tailwind-Admin** แบบใหม่ การสร้าง Dialog และฟอร์มกรอกข้อมูลจะต้องยึดหลักการออกแบบดังนี้:
+
+1. **Clean Dialog Headers:** 
+   - งดการใช้ไอคอนขนาดใหญ่ในหัวเรื่อง (`DialogTitle`) เพื่อลดความรกของหน้าจอ ให้เน้นใช้ตัวอักษรหนา (เช่น `text-[20px] sm:text-[22px] font-bold`) แทน
+   - พื้นหลัง Header ใช้สีสว่าง (หรือตามธีม) และมีเส้นคั่น `border-b` เบาๆ ด้านล่าง เพื่อแยกส่วนเนื้อหาออกจากส่วนหัวอย่างชัดเจน
+2. **Form Elements & Prefix Icons (ไอคอนด้านใน Input):**
+   - หัวข้อฟิลด์ (`Label`) ใช้แค่ตัวหนังสือเพียวๆ โดยไม่มีไอคอนผสม (เช่น `className="text-[14px] font-semibold text-foreground"`)
+   - นำ Icon มาฝังไว้ที่ **ด้านซ้ายมือข้างในช่องกรอกข้อมูล (Prefix Icon)** แทน โดยใช้โครงสร้าง `<div className="relative">` + `<Icon className="absolute left-3 top-1/2 -translate-y-1/2" />` และตั้งค่า Padding ซ้ายให้กับ Input/Select (`className="pl-9 h-[44px] rounded-[8px]"`)
+3. **Emphasis Wrappers (กล่องไฮไลท์):** 
+   - ฟิลด์ที่มีความสำคัญสูง หรือมีผลกระทบกับข้อมูลด้านล่างอย่างมีนัยสำคัญ (เช่น การเลือก Tenant ที่เป็นเงื่อนไขแรก) ต้องถูกจับใส่กล่องไฮไลท์พื้นหลังแยกออกมาต่างหาก เพื่อดึงดูดสายตาให้ผู้ใช้ทำก่อน (ตัวอย่าง: `className="space-y-2 bg-muted/30 p-3 rounded-lg border border-border/50"`)
+4. **Action Buttons (ปุ่มกดด้านล่าง):** 
+   - ปุ่ม Primary (Save/Update) ให้ใช้ความสูง `h-[44px]` ขอบโค้ง `rounded-[8px]` และเน้นความมีมิติด้วยแสงเงา (เช่น `bg-primary shadow-md shadow-primary/20 font-semibold`)
+5. **Mobile Responsiveness (โครงสร้างยืดหยุ่นบนมือถือ):**
+   - แบบฟอร์มและ Dialog ทั้งหมดต้องถูกออกแบบมาในลักษณะ Mobile-First
+   - **Dialog Width & Padding:** ปรับโครงสร้างแบบ Responsive (`sm:max-w-[480px] px-5 sm:px-7`) และควบคุมความสูงด้วยการทำให้ Scroll แค่ภายในกล่องเนื้อหา (`flex-1 overflow-y-auto`)
+   - **Grid System:** โครงสร้างข้อมูลขนานกัน ให้บีบซ้อนกันบนมือถือ (`grid-cols-1 sm:grid-cols-2 gap-4`)
+   - **Touch Targets:** ปุ่มกดใน Footer ให้ขยายเต็มความกว้างจอ และเรียงปุ่มสำคัญไว้ด้านบนเมื่ออยู่บนจอมือถือ (`flex-col-reverse sm:flex-row sm:justify-end w-full sm:w-auto`)
+   - **Tables:** ตารางที่มีข้อมูลหลายคอลัมน์ ต้องมี `overflow-x-auto` หุ้ม และกำหนด `min-w-[...]` ให้ตารางเลื่อนซ้ายขวาได้เสมอ
 
 ### 7.3 Data Integrity & Duplicate Checks (การตรวจสอบความถูกต้องของข้อมูล)
 - **Sensitive Data & Primary Keys:** ในกรณีที่ข้อมูลมีความสำคัญ หรือเป็นคีย์หลักที่ห้ามซ้ำซ้อน (เช่น Username, Mac Address, IP Address, Tenant Name) **ต้องมีการตรวจสอบข้อมูลซ้ำ (Duplicate Check)** เสมอ
 - การตรวจสอบนี้จะต้องทำทั้งในระดับ:
   1. **Backend (API & Database):** เช็กก่อนบันทึก และใช้ Constraint (เช่น Unique Index) ระดับฐานข้อมูลร่วมด้วย
   2. **Frontend:** ตรวจจับ Error Code จาก API และแสดงข้อความแจ้งเตือนผ่าน `react-toastify` ให้ผู้ใช้ทราบอย่างชัดเจนว่าข้อมูลมีการซ้ำซ้อนและไม่สามารถใช้ได้
+
+### 7.4 Large Dataset Selection (การเลือกข้อมูลปริมาณมากใน Dropdown)
+ในกรณีที่ฟอร์มหรือ Filter Bar จำเป็นต้องให้ผู้ใช้เลือกข้อมูลจากรายการที่มีจำนวนมหาศาล (เช่น รายชื่อสาขาหรือ Tenant นับพันแห่ง) การให้ผู้ใช้เลื่อน Scroll ลงมาเรื่อยๆ เป็นสิ่งที่ทำลาย User Experience (UX) ดังนั้นต้องใช้แนวทางดังนี้:
+1. **Searchable Combobox:** ใช้ UI แบบ **Combobox (Autocomplete)** เพื่อให้ผู้ใช้พิมพ์ตัวอักษรเพื่อค้นหาสิ่งที่ต้องการได้ทันที (ใช้ `Command` ของ shadcn/ui) แทนการใช้ `Select` แบบธรรมดา
+2. **Server-Side API Integration:** สำหรับชุดข้อมูลระดับพันหรือหมื่นแถว ห้าม Fetch ข้อมูลทั้งหมดมากองไว้ที่ Client-side เด็ดขาด Combobox จะต้องยิง API ค้นหาพร้อมกับ Debounce (เช่น รอ 300ms ค่อยยิง API สอดแทรก `?search=xxx&limit=20`) และรองรับระบบ Infinite Scroll (โหลดเพิ่มเมื่อเลื่อนลงสุดขอบ)
+3. **Virtualization:** หากมีการส่งข้อมูลระดับ 500+ แถวมาแสดงผลใน Dropdown เมนูจริงๆ จะต้องใช้เทคนิค **Virtual List** (`@tanstack/react-virtual`) เพื่อเรนเดอร์เฉพาะไอเทมที่มองเห็นเท่านั้น ช่วยลดปัญหาเบราว์เซอร์กระตุก
+
+### 7.5 Page Transitions & Layout Stability (ความเสถียรของหน้าจอเมื่อเปลี่ยนเพจ)
+เพื่อป้องกันปัญหา Layout Shift หรือหน้าจอกระตุกเมื่อเปลี่ยนเพจ หรือเปลี่ยนหน้าข้อมูลในตาราง ระบบ Frontend ต้องออกแบบตามหลักการนี้:
+1. **App Shell Stabilization:** ห้ามปล่อยให้ `<body>` ของแอปพลิเคชันเกิด Scrollbar โดยเด็ดขาด Layout หลักต้องเป็น `h-screen overflow-hidden` และกำหนดให้เฉพาะพื้นที่เนื้อหา (Content Area) ด้านในทำหน้าที่ Scroll ด้วย `overflow-y-auto` วิธีนี้ช่วยให้โครงสร้าง Sidebar และ Navbar นิ่งสนิท 100% เวลาเปลี่ยนหน้า
+2. **Table Pagination Anchoring:** ตารางข้อมูล (Data Table) ต้องมี Layout แบบ `flex flex-col` ควบคู่กับการกำหนดความสูงขั้นต่ำ (เช่น `min-h-[500px]` หรือ `h-full`) และตัวควบคุมหน้า (Pagination) ต้องถูกบังคับให้อยู่ด้านล่างสุดของกล่องด้วยคลาส `mt-auto` เพื่อป้องกันไม่ให้ Pagination กระโดดขึ้นไปด้านบนเมื่อจำนวนข้อมูลในหน้าสุดท้ายมีน้อยกว่าโควต้าปกติ (เช่น มีแค่ 1 แถว)

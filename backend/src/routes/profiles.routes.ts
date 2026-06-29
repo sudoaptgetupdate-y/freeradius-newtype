@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import { getProfiles, createProfile, deleteProfile, updateProfile } from "../controllers/profiles.controller";
 
 export const profilesRoutes: FastifyPluginAsync = async (fastify, opts) => {
