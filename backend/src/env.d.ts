@@ -3,5 +3,6 @@ export declare const env: {
     JWT_SECRET: string;
     PORT: string;
     HOST: string;
+    REDIS_URL: string;
 };
 //# sourceMappingURL=env.d.ts.map

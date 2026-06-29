@@ -1,3 +1,4 @@
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import "./workers/voucher.worker";
 export declare const buildApp: () => Promise<import("fastify").FastifyInstance<import("node:http").Server<typeof import("node:http").IncomingMessage, typeof import("node:http").ServerResponse>, import("node:http").IncomingMessage, import("node:http").ServerResponse<import("node:http").IncomingMessage>, import("fastify").FastifyBaseLogger, ZodTypeProvider>>;
 //# sourceMappingURL=app.d.ts.map

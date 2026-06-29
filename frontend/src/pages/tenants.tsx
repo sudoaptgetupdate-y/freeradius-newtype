@@ -16,14 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationLink,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTablePagination } from "@/components/data-table-pagination"
 import {
   Dialog,
   DialogContent,
@@ -156,6 +150,16 @@ export default function TenantsPage() {
     tenant.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = usePagination(filteredTenants)
+
   return (
     <div className="space-y-6 flex flex-col min-h-[calc(100vh-120px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -181,8 +185,8 @@ export default function TenantsPage() {
             />
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col flex-1">
-          <div className="rounded-xl border border-border/50 overflow-x-auto bg-background/50">
+        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col flex-1 h-[540px]">
+          <div className="rounded-xl border border-border/50 overflow-auto bg-background/50 max-h-[420px]">
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -193,14 +197,14 @@ export default function TenantsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTenants.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                       No tenants found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTenants.map((tenant) => (
+                  paginatedData.map((tenant) => (
                     <TableRow key={tenant.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">
                         <div className="flex items-center">
@@ -245,24 +249,14 @@ export default function TenantsPage() {
             </Table>
           </div>
           
-          <div className="mt-auto pt-6 pb-2">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious href="#" onClick={(e) => e.preventDefault()} className="hover:bg-accent hover:text-accent-foreground" />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" isActive className="shadow-sm">1</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" onClick={(e) => e.preventDefault()}>2</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext href="#" onClick={(e) => e.preventDefault()} className="hover:bg-accent hover:text-accent-foreground" />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

@@ -60,6 +60,7 @@ sudo -u postgres psql
 ก๊อปปี้คำสั่งเหล่านี้ไปวางในหน้าจอ `postgres=#` ทีละบรรทัด:
 ```sql
 CREATE DATABASE radius;
+ALTER DATABASE radius SET timezone TO 'UTC';
 CREATE USER radius WITH PASSWORD 'radpass123';
 GRANT ALL PRIVILEGES ON DATABASE radius TO radius;
 \q
@@ -95,7 +96,7 @@ sudo ln -s /etc/freeradius/3.0/mods-available/sql /etc/freeradius/3.0/mods-enabl
 แก้ไฟล์ตั้งค่าการเชื่อมต่อฐานข้อมูลโดยอัตโนมัติ (ใส่ User/Password ให้ตรงกับที่สร้างไว้):
 ```bash
 sudo sed -i 's/driver = "rlm_sql_null"/driver = "rlm_sql_postgresql"/' /etc/freeradius/3.0/mods-available/sql
-sudo sed -i 's/^#\s*dialect = "sqlite"/dialect = "postgresql"/' /etc/freeradius/3.0/mods-available/sql
+sudo sed -i 's/dialect = "sqlite"/dialect = "postgresql"/' /etc/freeradius/3.0/mods-available/sql
 sudo sed -i 's/^#\s*server = "localhost"/server = "localhost"/' /etc/freeradius/3.0/mods-available/sql
 sudo sed -i 's/^#\s*port = 3306/port = 5432/' /etc/freeradius/3.0/mods-available/sql
 sudo sed -i 's/^#\s*login = "radius"/login = "radius"/' /etc/freeradius/3.0/mods-available/sql

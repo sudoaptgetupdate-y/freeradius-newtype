@@ -46,7 +46,13 @@
 *   **REQ-SAAS-02 (Data Isolation & DB Design):** ระบบต้องแยกระดับการเข้าถึงข้อมูลอย่างเด็ดขาด โดยรองรับการใช้ Composite Unique Key (`tenant_id` + `username`) และปรับแก้ SQL ของ FreeRADIUS ให้ Query ควบคู่กับ `tenant_id` เสมอ
 *   **REQ-SAAS-03 (Global Monitoring & Services):** Master Dashboard สำหรับตรวจสอบสถานะ Server (CPU, RAM, Disk), ดูผู้ใช้รวมทั้งระบบ และสามารถกด Restart Service (`freeradius`, `postgresql`, `vector`, `loki`, `redis`) จากหน้าเว็บ
 *   **REQ-SAAS-04 (Master Staff Management):** ระบบสร้างและจัดการทีมงานส่วนกลาง (Support Team, Network Engineer) พร้อมกำหนด Role (จำกัดสิทธิ์ย่อยในระดับ Master)
-*   **REQ-SAAS-05 (Global Settings):** จัดการตั้งค่าระดับเซิร์ฟเวอร์ เช่น SMTP อีเมล, Timezone, และชุดคำสั่ง Radius Dictionary
+*   **REQ-SAAS-05 (Global Settings):** จัดการตั้งค่าระบบและระดับเซิร์ฟเวอร์แบบรวมศูนย์สำหรับ Super Admin (Master Level) ผ่านหน้า UI โดยจัดเก็บบันทึกข้อมูลลงฐานข้อมูล ซึ่งประกอบด้วยฟิลด์ตั้งค่าดังนี้:
+    *   **Telegram Bot Config:** Token (API Bot Token), Bot ID/Username, Admin Chat ID (สำหรับรับแจ้งเตือนระบบ), และ Switch เปิด/ปิดบอท
+    *   **Redis Integration Config:** IP/Host Address, Port (Default: 6379), Password (ถ้ามี) สำหรับระบบ Background Worker คิวงาน
+    *   **Loki & Vector Log Config:** Loki HTTP URL, Vector Syslog Port (Default: 514) เพื่อใช้จัดการซิงค์ Log
+    *   **SMTP Config:** Mail Server IP/Host, Port, User, Password, และ Sender Email
+    *   **General Config:** Timezone ของระบบ (เช่น Asia/Bangkok) และ Radius Dictionary
+
 
 ### 3.2 Authentication & Authorization Module
 *   **REQ-AUTH-01:** ระบบต้องรองรับการล็อกอินแยกระดับ (Master Login และ Tenant Login) พร้อมการเข้ารหัสรหัสผ่าน
@@ -101,6 +107,7 @@
     *   **OS Level (`radius.log`):** ตั้งค่า `logrotate` ใน Ubuntu เพื่อบีบอัด (Compress) และลบ Text Log ของ FreeRADIUS ที่เก่าเกินระยะเวลาที่กำหนดทิ้งโดยอัตโนมัติ
     *   **Database Level (`radacct`, `radpostauth`):** ใช้ระบบ Table Partitioning รายเดือน (Monthly Partition) ร่วมกับ Cron Job หากข้อมูลเดือนไหนเก่าเกินนโยบาย (เช่น 90 วัน) ระบบจะสั่งลบ Partition นั้นทิ้งทั้งก้อน (Drop Table) ทันที
     *   **Manual Clear (UI):** มีปุ่มในหน้า Master Dashboard ให้ Super Admin สามารถสั่งกด "Clear System Logs" หรือ "Purge Old Data" ด้วยตนเองได้ในกรณีฉุกเฉิน (เช่น Disk ใกล้เต็ม)
+*   **REQ-LOG-07 (Hybrid Logging Architecture):** รองรับสถาปัตยกรรมระดับ Enterprise SaaS ที่ให้ Tenant นำ Log Server ของตนเองมาเชื่อมต่อ (BYO-Loki / Dedicated Loki) ได้ โดยรองรับการระบุ `custom_loki_url` ในฐานข้อมูล ซึ่ง Backend จะทำหน้าที่เป็น Proxy ดึง Log จาก Custom URL นั้นมาแสดงผลบน Dashboard ให้ลูกค้าโดยอัตโนมัติ เพื่อลดภาระ Storage ของเซิร์ฟเวอร์หลัก
 
 ### 3.9 Telegram Bot Integration Module
 *   **REQ-TG-01 (Master Admin Bot):** เชื่อมต่อ Telegram แบบ **Webhook API** (ใส่ `Bot Token`) พร้อมสวิตช์เปิด/ปิด (Toggle) ระบบบอทส่วนกลาง ระบบจะแจ้งเตือนสถานะเซิร์ฟเวอร์ (Server Down/High CPU), แจ้งเตือนคำขอดาวน์โหลด Log และรองรับคำสั่งบอท (Slash Commands) เช่น `/status`

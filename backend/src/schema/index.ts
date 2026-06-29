@@ -5,3 +5,4 @@ export * from "./freeradius";
 export * from "./mac_bypass";
 export * from "./vouchers";
 export * from "./organizations";
+export * from "./settings";

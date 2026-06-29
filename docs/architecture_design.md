@@ -55,6 +55,14 @@
    - ให้ Vector เพิ่ม Label `{tenant_id="..."}` ลงในข้อมูลทุกบรรทัดก่อนส่งเข้า Loki
    - ฝั่ง Backend ค้นหาข้อมูลผ่าน LogQL โดยบังคับเติม prefix เสมอ เช่น `{tenant_id="Site_A"} |= "192.168.1.1"`
 
+### 3.4 Hybrid Logging Architecture (Centralized vs Dedicated Loki)
+เพื่อรองรับการขยายตัวระดับ Enterprise SaaS และลดข้อจำกัดด้าน Storage ของระบบกลาง ระบบจึงออกแบบสถาปัตยกรรม Log แยกเป็น 2 รูปแบบควบคู่กัน:
+1. **Central SaaS Loki (ศูนย์รวมบน SaaS):** ลูกค้าทั่วไป (SMB) ใช้งาน Log Server ส่วนกลางที่แชร์ร่วมกัน โดยใช้เทคนิค Tenant Isolation จากข้อ 3.3
+2. **Dedicated/BYO Loki (แยกเครื่องสำหรับ Tenant):** รองรับลูกค้ารายใหญ่ที่มีโควตาการเขียน Log สูง หรือมีนโยบายเก็บ Log ไว้ที่ Data Center ตัวเอง (Bring Your Own Loki)
+   - **กลไกที่ 1 (Direct from Router):** ตั้งค่า MikroTik ให้ยิง Remote Syslog ตรงไปยัง IP เครื่อง Loki ของลูกค้า
+   - **กลไกที่ 2 (Vector Routing):** หากให้ระบบจัดการให้ Vector จะตรวจสอบ `tenant_id` และทำการ Forward (Route) ทราฟฟิกไปยังเครื่องเซิร์ฟเวอร์ที่ 2 อัตโนมัติ
+   - **การสลับสับเปลี่ยนบน Dashboard:** ในตาราง `tenants` จะมีฟิลด์ `custom_loki_url` หากมีการตั้งค่านี้ Backend API จะทำตัวเป็น Proxy เข้าไปคิวรี LogQL จากเซิร์ฟเวอร์ที่ลูกค้าระบุแทนเซิร์ฟเวอร์กลาง ทำให้หน้าจอ UI ของลูกค้ายังคงทำงานได้แนบเนียนเหมือนเดิม
+
 ---
 
 ## 4. Mikrotik & Multi-Vendor Integration (การเชื่อมต่อและควบคุม Router)
@@ -142,3 +150,15 @@
 เพื่อป้องกันปัญหา Layout Shift หรือหน้าจอกระตุกเมื่อเปลี่ยนเพจ หรือเปลี่ยนหน้าข้อมูลในตาราง ระบบ Frontend ต้องออกแบบตามหลักการนี้:
 1. **App Shell Stabilization:** ห้ามปล่อยให้ `<body>` ของแอปพลิเคชันเกิด Scrollbar โดยเด็ดขาด Layout หลักต้องเป็น `h-screen overflow-hidden` และกำหนดให้เฉพาะพื้นที่เนื้อหา (Content Area) ด้านในทำหน้าที่ Scroll ด้วย `overflow-y-auto` วิธีนี้ช่วยให้โครงสร้าง Sidebar และ Navbar นิ่งสนิท 100% เวลาเปลี่ยนหน้า
 2. **Table Pagination Anchoring:** ตารางข้อมูล (Data Table) ต้องมี Layout แบบ `flex flex-col` ควบคู่กับการกำหนดความสูงขั้นต่ำ (เช่น `min-h-[500px]` หรือ `h-full`) และตัวควบคุมหน้า (Pagination) ต้องถูกบังคับให้อยู่ด้านล่างสุดของกล่องด้วยคลาส `mt-auto` เพื่อป้องกันไม่ให้ Pagination กระโดดขึ้นไปด้านบนเมื่อจำนวนข้อมูลในหน้าสุดท้ายมีน้อยกว่าโควต้าปกติ (เช่น มีแค่ 1 แถว)
+
+---
+
+## 8. Database Timezone Standards (มาตรฐานการจัดการเขตเวลาในระบบฐานข้อมูล)
+เพื่อป้องกันปัญหาการแสดงผลวันเวลาผิดพลาด (Time Shift / Timezone Mismatch) ระบบยึดหลักเกณฑ์ดังต่อไปนี้:
+- **Database Level Timezone (UTC):** ฐานข้อมูล PostgreSQL สำหรับ FreeRADIUS (`radius`) จะต้องถูกตั้งค่าเขตเวลาให้เป็น **`UTC`** เสมอ โดยการรันคำสั่ง `ALTER DATABASE radius SET timezone TO 'UTC';`
+- **เหตุผลทางเทคนิค:**
+  1. คอลัมน์เก็บเวลาของ FreeRADIUS ในตาราง `radacct` (เช่น `acctstarttime`, `acctstoptime`) ถูกสร้างในรูปแบบ `timestamp` (ไม่มี timezone)
+  2. หากฐานข้อมูลใช้ Timezone ท้องถิ่นของเซิร์ฟเวอร์ (เช่น `Asia/Bangkok`) ฟังก์ชัน `TO_TIMESTAMP()` ใน FreeRADIUS จะแปลง Epoch เป็นเวลาท้องถิ่นและบันทึกลงไป
+  3. เนื่องจากเป็นคอลัมน์ไม่มี Timezone ตัว Backend Driver (`postgres.js`) จะสรุปเอาเองว่าค่านั้นเป็น UTC (GMT+0) ทำให้เมื่อส่งไปแสดงผลที่ Browser ของลูกค้า จะเกิดการบวกเขตเวลาท้องถิ่นซ้ำซ้อน (เช่น แสดงเวลาล่วงหน้าไป 7 ชั่วโมงสำหรับประเทศไทย)
+  4. การตั้งค่า Database เป็น UTC จะบังคับให้ทั้ง FreeRADIUS และ Node.js บันทึก/อ่านค่าเวลาตามมาตรฐาน UTC เดียวกันทั้งหมด และปล่อยให้ Browser ของผู้ใช้งานทำหน้าที่แสดงผลแปลงเป็นเวลาท้องถิ่นจริงเพียงครั้งเดียว
+

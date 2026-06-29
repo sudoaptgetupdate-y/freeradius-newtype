@@ -2,3 +2,9 @@
 - **State Tracking:** Always read `project_state.md` at the root of the workspace at the start of a new session to understand the current progress and next steps.
 - **Testing Environment (Mikrotik):** The user has a physical Mikrotik router (IP: `10.0.0.1`) configured with RADIUS and a client computer ready. Always feel free to ask the user to perform live real-world tests when working on authentication or Mikrotik API integrations.
 - **Business Logic & Roles Requirements:** ALWAYS read and consult `docs/product_features_and_roles.md` alongside `docs/architecture_design.md` and `docs/system_requirements.md` before implementing any new UI or backend logic. This document contains crucial Role-based access logic (Super Admin vs Tenant Admin vs Self-Care) and specific feature boundaries that must not be violated.
+- **Dialog Layout & Styling Standard:** When creating or modifying Dialogs in the frontend React app, always use the following template rules:
+  - **DialogContent:** Use `bg-background border-none shadow-2xl` with close button styling: `[&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5`.
+  - **DialogHeader:** Use clean white/dark mode `bg-background` with a bottom border (`border-b border-border px-5 sm:px-8 py-5 sm:py-7`). Do not use dark/colored gradients. The Title should use `text-foreground` and subtitle `text-muted-foreground`.
+  - **Select Tenant & Critical Dropdowns:** Wrap prominent/important dropdowns in a highlighted box container: `space-y-2 bg-muted/30 p-3 rounded-lg border border-border/50`.
+  - **Form Actions Footer:** Use `DialogFooter` with `px-5 sm:px-7 py-4 border-t border-border bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-auto`.
+

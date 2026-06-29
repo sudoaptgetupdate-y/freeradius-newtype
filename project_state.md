@@ -64,6 +64,21 @@
     - Created `README.md` with complete installation instructions for new environments.
     - Initialized Git repo and pushed to `https://github.com/sudoaptgetupdate-y/freeradius-newtype.git`.
 
+14. **Vouchers & Queues (Phase 12):**
+    - Implemented backend logic (`vouchers.controller.ts`) for generating bulk internet vouchers with BullMQ and Redis.
+    - Built Frontend UI (`vouchers.tsx`) for managing and generating vouchers with a live progress bar.
+15. **FreeRADIUS Integration & Database Polish (Post-Phase 12):**
+    - Fixed `radacct` schema in PostgreSQL by adding missing IPv6 columns.
+    - Resolved `DATATYPE MISMATCH` error in accounting records by ensuring FreeRADIUS is configured with `dialect = "postgresql"`.
+    - Fixed `ON CONFLICT` spec constraint errors by adding a `unique()` key to `acctuniqueid` in the `radacct` table schema and running a migration.
+    - Verified that active and historical session records are processed successfully, and details modals correctly format user statistics (traffic, time, MAC, session history).
+16. **Dashboard UI Enhancements & Hybrid Logging Architecture:**
+    - Improved User Management UI: Added visual hierarchy (emerald/pulsing for online, muted for offline) and resolved missing data for offline users by fetching "Last Known" session details and cumulative data.
+    - Updated documentation (`docs/freeradius_multitenant_sql_config.md`) with production-ready PostgreSQL queries using `${....event_timestamp}` to solve Date/Time literal formatting issues.
+    - Designed and documented the **Hybrid Logging Architecture** (Centralized SaaS Loki vs Dedicated/BYO Loki) in `architecture_design.md` and `system_requirements.md` to support Enterprise deployments.
+    - Resolved database session timezone discrepancy (+7 hours shift in Web UI) by setting default database timezone to `UTC` (`ALTER DATABASE radius SET timezone TO 'UTC';`), updating `freeradius_complete_setup_guide.md` and `architecture_design.md` to ensure standardized datetime display.
+
+
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.
    - **[Finalized Design] Dashboard Layout:** Selected 'Classic & Minimal' (Light Mode). Features metric cards at the top (Total Tenants, Online Users) and a large Network Traffic line chart below. Clean and professional aesthetic.
@@ -72,16 +87,14 @@
 
 ### 4. AI Guidelines:
    - Created `SKILL.md` enforcing Multi-Tenancy isolation, Soft Deletes, and Tech Stack.
+   - Added standard styling guidelines for React Dialogs in `AGENTS.md`.
 
 ### 🚧 MVP STATUS: IN PROGRESS (Missing Core Features)
-- Phase 1 to 11 have been successfully completed. 
+- Phase 1 to 12 have been successfully completed. 
 - However, several critical requirements from the SRS are still pending implementation to achieve true MVP for a SaaS Hotspot system.
 
 ### 🎯 Next Steps & Pending Phases:
-1. **Phase 12: Vouchers & Queues (REQ-USER-04)**
-   - Implement backend logic (`vouchers.controller.ts`) for generating bulk internet vouchers.
-   - Build Frontend UI (`vouchers.tsx`) for managing and printing vouchers.
-2. **Phase 13: Captive Portal & Ads (REQ-PORTAL-01, 02)**
+1. **Phase 13: Captive Portal & Ads (REQ-PORTAL-01, 02)**
    - Create public-facing Hotspot login pages with Dynamic Theme support based on `nas_mac`.
    - Implement pre-login advertisement logic.
 3. **Phase 14: End-User Self-Care Portal (REQ-USER-05)**

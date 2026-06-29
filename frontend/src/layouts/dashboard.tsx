@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTranslation } from "react-i18next"
-import { LayoutDashboard, Users, Settings, LogOut, Menu, Building2, Server, ShieldCheck, Search, Bell, ChevronDown, Wifi, UserCog } from "lucide-react"
+import { LayoutDashboard, Users, Settings, LogOut, Menu, Building2, Server, ShieldCheck, Search, Bell, ChevronDown, Wifi, UserCog, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
@@ -58,7 +58,15 @@ export function DashboardLayout() {
         
         <NavItem to="/profiles" icon={ShieldCheck} label={t('nav.profiles')} />
         <NavItem to="/nas" icon={Server} label={t('nav.nas')} />
+        <NavItem to="/vouchers" icon={Ticket} label="Vouchers" />
         <NavItem to="/users" icon={Users} label={t('nav.users')} />
+        
+        {user?.role === "super_admin" && (
+          <div className="mt-4 pt-4 border-t border-sidebar-border/50">
+            <div className="text-[11px] font-bold text-sidebar-foreground/40 uppercase tracking-widest mb-3 px-2">System</div>
+            <NavItem to="/settings" icon={Settings} label="Global Settings" />
+          </div>
+        )}
       </nav>
       
       <div className="p-4 border-t border-sidebar-border/50">

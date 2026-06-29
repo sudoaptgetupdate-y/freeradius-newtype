@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
 import { radcheck, radacct, radusergroup } from "../schema/freeradius";
-import { eq, and, isNull, not } from "drizzle-orm";
+import { eq, and, isNull, not, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 
 const userSchema = z.object({
@@ -50,15 +50,14 @@ export const getUsers = async (request: FastifyRequest, reply: FastifyReply) => 
 
     const radcheckUsers = await usersQuery;
 
-    // Now for each user, check if they are online in radacct
-    // This is a naive approach (N+1), but acceptable for a quick 50-limit list without complex subqueries
     const userList = await Promise.all(
       radcheckUsers.map(async (u) => {
+        // 1. Check if user is currently online (has session with no stop time)
         const activeSessionRes = await db
           .select({
-            nasipaddress: radacct.nasipaddress,
+            radacctid: radacct.radacctid,
             framedipaddress: radacct.framedipaddress,
-            callingstationid: radacct.callingstationid, // MAC Address usually
+            callingstationid: radacct.callingstationid,
             acctinputoctets: radacct.acctinputoctets,
             acctoutputoctets: radacct.acctoutputoctets,
           })
@@ -71,42 +70,52 @@ export const getUsers = async (request: FastifyRequest, reply: FastifyReply) => 
             )
           )
           .limit(1);
-
         const activeSession = activeSessionRes[0];
+        const isOnline = !!activeSession;
+
+        // 2. Fetch last known session (most recent session overall)
+        const lastSessionRes = await db
+          .select({
+            framedipaddress: radacct.framedipaddress,
+            callingstationid: radacct.callingstationid,
+            acctinputoctets: radacct.acctinputoctets,
+            acctoutputoctets: radacct.acctoutputoctets,
+          })
+          .from(radacct)
+          .where(
+            and(
+              eq(radacct.username, u.username),
+              eq(radacct.tenantId, u.tenantId)
+            )
+          )
+          .orderBy(desc(radacct.acctstarttime))
+          .limit(1);
+        const lastSession = lastSessionRes[0];
+
+        // 3. Calculate data usage (use active session if online, last session if offline)
+        const targetSession = isOnline ? activeSession : lastSession;
+        let usageMB = "0.00";
+        if (targetSession) {
+          const download = Number(targetSession.acctoutputoctets || 0);
+          const upload = Number(targetSession.acctinputoctets || 0);
+          usageMB = ((download + upload) / (1024 * 1024)).toFixed(2);
+        }
 
         // Fetch user's profile
         const profileRes = await db.select().from(radusergroup).where(and(eq(radusergroup.username, u.username), eq(radusergroup.tenantId, u.tenantId))).limit(1);
         const profileName = profileRes.length > 0 ? profileRes[0].groupname : "Default";
 
-        if (activeSession) {
-          const download = Number(activeSession.acctoutputoctets || 0);
-          const upload = Number(activeSession.acctinputoctets || 0);
-          const usageMB = ((download + upload) / (1024 * 1024)).toFixed(2);
-
-          return {
-            id: String(u.id),
-            username: u.username,
-            mac: activeSession.callingstationid || "-",
-            ip: activeSession.framedipaddress || "-",
-            dataUsage: `${usageMB} MB`,
-            status: "online",
-            isOnline: true,
-            profileName,
-            tenantId: u.tenantId,
-          };
-        } else {
-          return {
-            id: String(u.id),
-            username: u.username,
-            mac: "-",
-            ip: "-",
-            dataUsage: "0 MB",
-            status: "offline",
-            isOnline: false,
-            profileName,
-            tenantId: u.tenantId,
-          };
-        }
+        return {
+          id: String(u.id),
+          username: u.username,
+          mac: lastSession?.callingstationid || "-",
+          ip: lastSession?.framedipaddress || "-",
+          dataUsage: `${usageMB} MB`,
+          status: isOnline ? "online" : "offline",
+          isOnline,
+          profileName,
+          tenantId: u.tenantId,
+        };
       })
     );
 
@@ -219,5 +228,99 @@ export const deleteUser = async (request: FastifyRequest, reply: FastifyReply) =
   } catch (error) {
     request.log.error(error);
     reply.status(500).send({ error: "Internal Server Error" });
+  }
+};
+
+export const getUserDetails = async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const authUser = request.user as any;
+    const { username } = request.params as { username: string };
+    const query = request.query as { tenantId?: string };
+
+    const targetTenantId = (authUser.role === "super_admin" || authUser.role === "admin") ? query.tenantId : authUser.tenantId;
+
+    if (!targetTenantId) {
+      return reply.status(400).send({ error: "Tenant ID is required" });
+    }
+
+    // Verify user exists in radcheck
+    const userExist = await db
+      .select({ id: radcheck.id })
+      .from(radcheck)
+      .where(and(eq(radcheck.username, username), eq(radcheck.tenantId, targetTenantId)))
+      .limit(1);
+
+    if (userExist.length === 0) {
+      return reply.status(404).send({ error: "User not found" });
+    }
+
+    // Get profile
+    const profileRes = await db
+      .select()
+      .from(radusergroup)
+      .where(and(eq(radusergroup.username, username), eq(radusergroup.tenantId, targetTenantId)))
+      .limit(1);
+    const profileName = profileRes.length > 0 ? profileRes[0]?.groupname : "Default";
+
+    // Get active session
+    const activeSessionRes = await db
+      .select()
+      .from(radacct)
+      .where(and(eq(radacct.username, username), eq(radacct.tenantId, targetTenantId), isNull(radacct.acctstoptime)))
+      .limit(1);
+    const activeSession = activeSessionRes[0] || null;
+
+    // Get lifetime stats (Total data, total session time, last login)
+    const statsQuery = await db.execute(sql`
+      SELECT 
+        SUM(COALESCE(acctinputoctets, 0) + COALESCE(acctoutputoctets, 0))::bigint as "totalBytes",
+        SUM(COALESCE(acctsessiontime, 0))::bigint as "totalDuration",
+        MAX(acctstarttime) as "lastLogin"
+      FROM radacct
+      WHERE username = ${username} AND tenant_id = ${targetTenantId}::uuid
+    `);
+    
+    const stats = statsQuery[0] || { totalBytes: 0, totalDuration: 0, lastLogin: null };
+
+    // Get unique MAC addresses
+    const macsQuery = await db.execute(sql`
+      SELECT DISTINCT callingstationid as "mac"
+      FROM radacct
+      WHERE username = ${username} AND tenant_id = ${targetTenantId}::uuid AND callingstationid IS NOT NULL AND callingstationid != ''
+    `);
+    const macs = macsQuery.map((r: any) => r.mac);
+
+    // Get recent 5 sessions
+    const recentSessions = await db
+      .select({
+        radacctid: radacct.radacctid,
+        acctstarttime: radacct.acctstarttime,
+        acctstoptime: radacct.acctstoptime,
+        acctsessiontime: radacct.acctsessiontime,
+        nasipaddress: radacct.nasipaddress,
+        framedipaddress: radacct.framedipaddress,
+        callingstationid: radacct.callingstationid,
+        acctterminatecause: radacct.acctterminatecause,
+      })
+      .from(radacct)
+      .where(and(eq(radacct.username, username), eq(radacct.tenantId, targetTenantId)))
+      .orderBy(desc(radacct.acctstarttime))
+      .limit(5);
+
+    return reply.send({
+      username,
+      profileName,
+      activeSession,
+      stats: {
+        totalBytes: String(stats.totalBytes || 0),
+        totalDuration: Number(stats.totalDuration || 0),
+        lastLogin: stats.lastLogin,
+      },
+      macs,
+      recentSessions,
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.code(500).send({ error: "Internal Server Error" });
   }
 };

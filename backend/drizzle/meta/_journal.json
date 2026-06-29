@@ -15,6 +15,27 @@
       "when": 1782715305495,
       "tag": "0001_late_toxin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782744656215,
+      "tag": "0002_goofy_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782745501813,
+      "tag": "0003_pink_stellaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782746692486,
+      "tag": "0004_black_machine_man",
+      "breakpoints": true
     }
   ]
 }

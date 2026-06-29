@@ -27,6 +27,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import api from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTablePagination } from "@/components/data-table-pagination"
 
 type ProfileData = {
   name: string
@@ -41,6 +43,15 @@ export function ProfilesPage() {
   const { user } = useAuth()
   const MySwal = withReactContent(Swal)
   const [profiles, setProfiles] = useState<ProfileData[]>([])
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = usePagination(profiles)
   const [tenants, setTenants] = useState<{id: string, name: string}[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -238,8 +249,8 @@ export function ProfilesPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-0 sm:pt-6 p-4 sm:p-6">
-          <div className="rounded-md border overflow-x-auto">
+        <CardContent className="pt-0 sm:pt-6 p-4 sm:p-6 flex flex-col h-[540px]">
+          <div className="rounded-md border overflow-auto max-h-[420px]">
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -251,14 +262,14 @@ export function ProfilesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {profiles.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No packages found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  profiles.map((profile) => (
+                  paginatedData.map((profile) => (
                     <TableRow key={profile.name} className="hover:bg-muted/50">
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
@@ -296,28 +307,36 @@ export function ProfilesPage() {
               </TableBody>
             </Table>
           </div>
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
-          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 bg-gradient-to-r from-slate-800 to-slate-900">
-            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-white pr-6">
+        <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
               {editingProfileName ? "Edit Internet Package" : "Add Internet Package"}
             </DialogTitle>
             <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
               {editingProfileName ? "Update bandwidth and session rules for users." : "Set bandwidth and session rules for users."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateProfileWrapper} className="flex flex-col h-full">
+          <form onSubmit={handleCreateProfileWrapper} className="flex flex-col h-full pt-4">
             <div className="px-5 sm:px-7 pb-4 space-y-4 flex-1 overflow-y-auto">
               {(user?.role === "super_admin" || user?.role === "admin") && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="tenant" className="text-[14px] font-semibold text-foreground">Tenant</Label>
+                <div className="space-y-2 bg-muted/30 p-3 rounded-lg border border-border/50">
+                  <Label htmlFor="tenant" className="text-[14px] font-semibold text-foreground">Select Tenant</Label>
                   <div className="relative">
                     <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val})}>
-                      <SelectTrigger id="tenant" className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                      <SelectTrigger id="tenant" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
                         <SelectValue placeholder="Select a tenant" />
                       </SelectTrigger>
                       <SelectContent>

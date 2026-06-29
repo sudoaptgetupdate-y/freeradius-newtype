@@ -6,6 +6,7 @@ const envSchema = z.object({
     JWT_SECRET: z.string().min(10),
     PORT: z.string().default("3000"),
     HOST: z.string().default("0.0.0.0"),
+    REDIS_URL: z.string().url().default("redis://localhost:6379"),
 });
 const _env = envSchema.safeParse(process.env);
 if (!_env.success) {

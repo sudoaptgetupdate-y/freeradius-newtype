@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/table"
 import api from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTablePagination } from "@/components/data-table-pagination"
 
 type NasData = {
   id: number
@@ -176,6 +178,16 @@ export default function NasPage() {
     nas.shortname.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = usePagination(filteredNas)
+
   const handleTestApi = async (id: number) => {
     try {
       MySwal.fire({
@@ -232,8 +244,8 @@ export default function NasPage() {
             />
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="rounded-md border overflow-x-auto">
+        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
+          <div className="rounded-md border overflow-auto max-h-[420px]">
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -245,14 +257,14 @@ export default function NasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredNas.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No router/NAS devices found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredNas.map((nas) => (
+                  paginatedData.map((nas) => (
                     <TableRow key={nas.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">
                         <div className="flex items-center">
@@ -292,6 +304,14 @@ export default function NasPage() {
               </TableBody>
             </Table>
           </div>
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

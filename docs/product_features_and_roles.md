@@ -20,7 +20,12 @@
 - **Service Status:** ตรวจสอบและสั่ง Restart Service สำคัญเบื้องหลัง (`freeradius`, `postgresql`, `loki`, `vector`, `redis`)
 
 ### 1.3 การตั้งค่าระบบระดับกลาง (Global Configuration)
-- **Global Settings:** ตั้งค่าพารามิเตอร์พื้นฐาน เช่น Timezone, SMTP Server สำหรับส่งอีเมล
+- **Global Settings (หน้าการตั้งค่าระบบหลัก):** แผงตั้งค่ารวมศูนย์สำหรับจัดการพารามิเตอร์หลักของระบบ โดยแอดมินสามารถกรอกรายละเอียดดังนี้:
+  - **Telegram Bot Configuration:** ใส่ Bot Token, บัญชีผู้ใช้งานบอท (Bot ID/Username), Chat ID ส่วนกลางสำหรับส่งแจ้งเตือนระบบ (Server Alert) พร้อมสวิตช์ เปิด/ปิด
+  - **Redis Connection:** ตั้งค่า IP Address/Host, Port และ Password ของเซิร์ฟเวอร์ Redis เพื่อใช้กับระบบคิวประมวลผลหลังบ้าน
+  - **Loki & Vector Connection:** ระบุ Loki HTTP API URL และพอร์ต Syslog ของ Vector (สำหรับรับส่ง Log พ.ร.บ.)
+  - **SMTP Server:** โฮสต์อีเมล SMTP, พอร์ต, บัญชีผู้ใช้, รหัสผ่าน และอีเมลผู้ส่ง สำหรับระบบแจ้งเตือนทางอีเมล
+  - **General Settings:** เขตเวลา (Timezone) ของเซิร์ฟเวอร์
 - **SSL / Certificate Management:** นำเข้า Public CA Certificate (เช่น Let's Encrypt) ลงใน FreeRADIUS EAP เพื่อรองรับความปลอดภัยของการเชื่อมต่อ 802.1X
 - **Radius Dictionary Management:** อัปเดตชุดคำสั่ง Radius Attributes เพื่อรองรับอุปกรณ์เครือข่ายใหม่ๆ
 

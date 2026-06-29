@@ -35,6 +35,7 @@ description: Strict guidelines for coding syntax, file structures, and code qual
 เพื่อรักษาความรู้สึกพรีเมียม (Premium Feel) ของระบบ ห้ามให้หน้าจอกระตุกหรือสั่นเวลาเปลี่ยนหน้าเด็ดขาด:
 1. **Fixed App Shell & Inner Scroll:** โครงสร้างหลักของแอป (Sidebar + Header) ต้องถูกล็อกความสูงไว้ที่ `h-screen` เสมอ และให้เฉพาะกรอบเนื้อหาตรงกลาง (Main Content) มีคลาส `overflow-y-auto` วิธีนี้จะช่วยไม่ให้ Scrollbar ด้านขวาสั่นหรือโผล่เข้าๆ ออกๆ เวลาเปลี่ยนไปเพจที่สั้นกว่า
 2. **Table Pagination Anchoring:** ทุกหน้าที่มีตารางและ Pagination ต้องป้องกันไม่ให้ Pagination "เด้งขึ้น" เวลาหน้าสุดท้ายมีข้อมูลไม่เต็มโควต้า (เช่น มี 1 แถวจาก 10 แถว) โดยให้ห่อหุ้มตารางและ Pagination ไว้ใน `flex flex-col min-h-[500px]` (หรือ `h-full`) และใส่คลาส `mt-auto` ไว้ที่ตัว Pagination เพื่อถีบมันให้อยู่ติดขอบล่างเสมอ
+3. **Table Pagination Control:** ทุกหน้าที่แสดงข้อมูลในรูปแบบตาราง (Table) **ต้องมีระบบ Pagination เสมอ** และต้องมี Dropdown ให้ผู้ใช้สามารถเลือก "จำนวนแถวต่อหน้า (Rows per page)" ได้ โดยให้ค่าเริ่มต้น (Default) อยู่ที่ 10 แถว จากนั้นมีตัวเลือกให้ปรับเป็น 20, 50, และ 100 แถวตามลำดับ
 
 ---
 

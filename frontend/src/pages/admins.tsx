@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/table"
 import api from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTablePagination } from "@/components/data-table-pagination"
 
 type AdminData = {
   id: string
@@ -177,6 +179,16 @@ export default function AdminsPage() {
     admin.role.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = usePagination(filteredAdmins)
+
   const getRoleBadgeColor = (role: string) => {
     switch(role) {
       case 'super_admin': return 'bg-red-500/10 text-red-600 border-red-500/20'
@@ -212,8 +224,8 @@ export default function AdminsPage() {
             />
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="rounded-md border overflow-x-auto">
+        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
+          <div className="rounded-md border overflow-auto max-h-[420px]">
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -226,14 +238,14 @@ export default function AdminsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAdmins.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={user?.role === "super_admin" ? 4 : 3} className="h-24 text-center text-muted-foreground">
                       No users found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAdmins.map((admin) => (
+                  paginatedData.map((admin) => (
                     <TableRow key={admin.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">
                         <div className="flex items-center">
@@ -278,6 +290,14 @@ export default function AdminsPage() {
               </TableBody>
             </Table>
           </div>
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

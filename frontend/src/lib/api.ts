@@ -18,4 +18,19 @@ api.interceptors.request.use(
   }
 )
 
+// Response interceptor to handle 401 Unauthorized globally
+api.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("saas-token")
+      localStorage.removeItem("saas-user")
+      window.location.href = "/login"
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default api

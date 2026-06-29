@@ -14,6 +14,8 @@ import { profilesRoutes } from "./routes/profiles.routes";
 import { adminsRoutes } from "./routes/admins.routes";
 import vouchersRoutes from "./routes/vouchers.routes";
 import webhooksRoutes from "./routes/webhooks.routes";
+import settingsRoutes from "./routes/settings.routes";
+import "./workers/voucher.worker";
 
 export const buildApp = async () => {
   const app = fastify({
@@ -72,6 +74,7 @@ export const buildApp = async () => {
   // Register Skeleton Features
   app.register(vouchersRoutes, { prefix: "/api/v1/vouchers" });
   app.register(webhooksRoutes, { prefix: "/api/v1/webhooks" });
+  app.register(settingsRoutes, { prefix: "/api/v1/settings" });
 
   // Healthcheck Route
   app.get("/health", async () => {

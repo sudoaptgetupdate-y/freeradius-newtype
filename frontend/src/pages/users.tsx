@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Filter, MoreHorizontal, Plus, Edit, Trash2, LogOut, Loader2, User, Key, Package, Building } from "lucide-react"
+import { Search, Filter, MoreHorizontal, Plus, Edit, Trash2, LogOut, Loader2, User, Key, Package, Building, Eye, Calendar, Clock, Database, Laptop } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/dialog"
 import api from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTablePagination } from "@/components/data-table-pagination"
 
 type UserData = {
   id: string
@@ -78,6 +80,53 @@ export function UsersPage() {
     profileName: "",
     tenantId: ""
   })
+
+  // Details Dialog State
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false)
+  const [userDetails, setUserDetails] = useState<any>(null)
+
+  const handleOpenDetails = async (username: string) => {
+    setIsDetailsOpen(true)
+    setIsDetailsLoading(true)
+    setUserDetails(null)
+    try {
+      let tenantIdQuery = ""
+      if (user?.role === "super_admin" || user?.role === "admin") {
+        const targetUser = users.find(u => u.username === username)
+        if (targetUser && (targetUser as any).tenantId) {
+          tenantIdQuery = `?tenantId=${(targetUser as any).tenantId}`
+        }
+      }
+      const response = await api.get(`/users/${username}/details${tenantIdQuery}`)
+      setUserDetails(response.data)
+    } catch (error) {
+      console.error("Failed to fetch user details:", error)
+      toast.error("Failed to load user details")
+      setIsDetailsOpen(false)
+    } finally {
+      setIsDetailsLoading(false)
+    }
+  }
+
+  const formatBytes = (bytesStr: string) => {
+    const bytes = Number(bytesStr || 0)
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return "0s"
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    }
+    return `${minutes}m ${seconds % 60}s`
+  }
 
   const fetchUsers = async () => {
     try {
@@ -187,6 +236,16 @@ export function UsersPage() {
     return matchesSearch && matchesStatus
   })
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = usePagination(filteredUsers)
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -227,8 +286,8 @@ export function UsersPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="rounded-md border overflow-x-auto">
+        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
+          <div className="rounded-md border overflow-auto max-h-[420px]">
             <Table className="min-w-[800px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -242,34 +301,45 @@ export function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       No users found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((user) => (
+                  paginatedData.map((user) => (
                     <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span>{user.username}</span>
+                          <span
+                            className={`font-semibold cursor-pointer hover:underline transition-colors ${
+                              user.isOnline 
+                                ? "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300" 
+                                : "text-muted-foreground/80 hover:text-foreground"
+                            }`}
+                            onClick={() => handleOpenDetails(user.username)}
+                          >
+                            {user.username}
+                          </span>
                           {(user as any).tenantId && (
                             <span className="text-xs text-muted-foreground">Tenant: {(user as any).tenantId}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{user.profileName}</Badge></TableCell>
-                      <TableCell className="font-mono text-xs hidden md:table-cell">{user.mac}</TableCell>
-                      <TableCell className="font-mono text-xs hidden lg:table-cell">{user.ip}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{user.dataUsage}</TableCell>
+                      <TableCell className={`font-mono text-xs hidden md:table-cell ${user.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{user.mac}</TableCell>
+                      <TableCell className={`font-mono text-xs hidden lg:table-cell ${user.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{user.ip}</TableCell>
+                      <TableCell className={`hidden sm:table-cell ${user.isOnline ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground/60"}`}>{user.dataUsage}</TableCell>
                       <TableCell>
                         {user.isOnline ? (
-                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 px-2 py-0.5 font-medium inline-flex items-center gap-1.5 w-fit">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             {t('users.statusOnline')}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-muted-foreground">
+                          <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-muted px-2 py-0.5 font-medium inline-flex items-center gap-1.5 w-fit">
+                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
                             {t('users.statusOffline')}
                           </Badge>
                         )}
@@ -283,6 +353,10 @@ export function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenDetails(user.username)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Edit className="mr-2 h-4 w-4" />
                               {t('users.actionEdit')}
@@ -307,6 +381,14 @@ export function UsersPage() {
               </TableBody>
             </Table>
           </div>
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 
@@ -407,6 +489,148 @@ export function UsersPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
+              User Details: {userDetails?.username || "Loading..."}
+            </DialogTitle>
+            <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
+              Deep insights and session history for this user.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isDetailsLoading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : userDetails ? (
+            <div className="px-5 sm:px-8 py-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              {/* Summary Badges */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <Badge variant="outline" className="text-sm px-3 py-1">
+                  Profile: {userDetails.profileName}
+                </Badge>
+                {userDetails.activeSession ? (
+                  <Badge className="bg-emerald-500 hover:bg-emerald-600 text-sm px-3 py-1">
+                    Online
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-sm px-3 py-1 text-muted-foreground">
+                    Offline
+                  </Badge>
+                )}
+              </div>
+
+              {/* Active Session Info (If online) */}
+              {userDetails.activeSession && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl space-y-2">
+                  <h4 className="font-semibold text-emerald-700 text-sm flex items-center">
+                    <Laptop className="mr-2 h-4 w-4" /> Active Connection Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-emerald-800">
+                    <div>IP Address: <span className="font-mono">{userDetails.activeSession.framedipaddress || "-"}</span></div>
+                    <div>MAC Address: <span className="font-mono">{userDetails.activeSession.callingstationid || "-"}</span></div>
+                    <div>Started: <span className="font-mono">{new Date(userDetails.activeSession.acctstarttime).toLocaleString()}</span></div>
+                    <div>NAS IP: <span className="font-mono">{userDetails.activeSession.nasipaddress}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Statistics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="p-4 flex items-center space-x-3 bg-muted/20 border-border/50 shadow-none">
+                  <Database className="h-8 w-8 text-primary/85" />
+                  <div>
+                    <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Total Data</p>
+                    <p className="text-sm font-bold mt-0.5">{formatBytes(userDetails.stats.totalBytes)}</p>
+                  </div>
+                </Card>
+                <Card className="p-4 flex items-center space-x-3 bg-muted/20 border-border/50 shadow-none">
+                  <Clock className="h-8 w-8 text-primary/85" />
+                  <div>
+                    <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Online Time</p>
+                    <p className="text-sm font-bold mt-0.5">{formatDuration(userDetails.stats.totalDuration)}</p>
+                  </div>
+                </Card>
+                <Card className="p-4 flex items-center space-x-3 bg-muted/20 border-border/50 shadow-none">
+                  <Calendar className="h-8 w-8 text-primary/85" />
+                  <div>
+                    <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Last Login</p>
+                    <p className="text-sm font-bold mt-0.5">
+                      {userDetails.stats.lastLogin ? new Date(userDetails.stats.lastLogin).toLocaleDateString() : "Never"}
+                    </p>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Used Devices (MAC addresses) */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Used MAC Addresses ({userDetails.macs.length})</h4>
+                {userDetails.macs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No devices recorded.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {userDetails.macs.map((mac: string) => (
+                      <Badge key={mac} variant="secondary" className="font-mono text-xs px-2.5 py-0.5">
+                        {mac}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Sessions Table */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Recent Login History (Last 5 Sessions)</h4>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table className="min-w-[500px] text-xs">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Start Time</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>IP Address</TableHead>
+                        <TableHead>MAC Address</TableHead>
+                        <TableHead>Termination Cause</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {userDetails.recentSessions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                            No history found.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        userDetails.recentSessions.map((sess: any) => (
+                          <TableRow key={sess.radacctid}>
+                            <TableCell className="font-mono">{new Date(sess.acctstarttime).toLocaleString()}</TableCell>
+                            <TableCell>{formatDuration(sess.acctsessiontime)}</TableCell>
+                            <TableCell className="font-mono">{sess.framedipaddress || "-"}</TableCell>
+                            <TableCell className="font-mono">{sess.callingstationid || "-"}</TableCell>
+                            <TableCell className="text-muted-foreground">{sess.acctterminatecause || "Active"}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+              No data.
+            </div>
+          )}
+          <DialogFooter className="px-5 sm:px-7 py-4 border-t border-border bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-auto">
+            <Button type="button" variant="outline" className="w-full sm:w-auto h-[44px] px-5 rounded-[8px]" onClick={() => setIsDetailsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
