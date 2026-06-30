@@ -167,7 +167,8 @@ export function LoginForm({ tenantId, settings, onRegisterClick }: LoginFormProp
   }
 
   const handleSocialLogin = (provider: "google" | "line") => {
-    const baseUrl = import.meta.env.VITE_API_URL || "";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+    const baseUrl = apiUrl.replace(/\/api\/v1\/?$/, ""); // strip /api/v1 if present
     const params = new URLSearchParams();
     if (linkLogin) params.append("linkLogin", linkLogin);
     if (mac) params.append("mac", mac);
