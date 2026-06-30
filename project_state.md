@@ -94,6 +94,12 @@
     - Added a persistent **"Live Preview"** slide-out Sheet (Drawer) showing real-time updates for Login/Register layouts during editing.
     - Aligned page constraints of Portal Settings to match Global Settings (`max-w-[1200px] mx-auto`) and removed duplicate padding.
     - Standardized **Vouchers** list layout by grouping filters and the Refresh button into a single `<CardHeader>` row, eliminating vertical whitespace.
+20. **Social Login Integration (Phase 13):**
+    - Updated `settings.ts` and `portal.ts` schemas to store global fallback and tenant-level override credentials for Google OAuth 2.0 and LINE Login.
+    - Created `social-auth.controller.ts` to handle dynamic generation of OAuth URLs and callback token exchanges, including auto-registration logic mapping users to the tenant's `defaultRegisterProfile`.
+    - Implemented a "Hidden Form Auto-Submit" mechanism in the callback handler to pass authenticated credentials back to Mikrotik/Hotspot gateways using the `linkLogin` URL state.
+    - Updated `settings.tsx` (Global Control Panel) and `portal-settings.tsx` (Wizard Step 3) to allow admins to easily configure OAuth Provider credentials.
+    - Updated `login-form.tsx` on the captive portal to dynamically generate OAuth authorization URLs while securely passing gateway states (mac, ip, dst, linkLogin).
 
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.
@@ -110,10 +116,7 @@
 - However, several critical requirements from the SRS are still pending implementation to achieve true MVP for a SaaS Hotspot system.
 
 ### 🎯 Next Steps & Pending Phases:
-1. **Phase 13: Captive Portal Social Login & Ads (REQ-PORTAL-01, 02)**
-   - Implement External Social Login integrations (Google OAuth 2.0 and LINE Login) for the public login page.
-   - Implement pre-login advertisement logic.
-3. **Phase 14: End-User Self-Care Portal (REQ-USER-05)**
+1. **Phase 14: End-User Self-Care Portal (REQ-USER-05)**
    - Build a dashboard for internet users to check quota, change passwords, and self-disconnect sessions via RADIUS CoA.
 4. **Phase 15: Telegram Bot Integration (REQ-SAAS-06)**
    - Implement `webhooks.controller.ts` to send alerts (NAS offline, approval requests) to Telegram.

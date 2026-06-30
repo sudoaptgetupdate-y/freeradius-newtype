@@ -20,6 +20,10 @@ export const updateSettingsSchema = z.object({
   leftTextColor: z.string().max(10).regex(/^#[0-9a-fA-F]{3,6}$/, "Invalid HEX color"),
   leftAccentColor: z.string().max(10).regex(/^#[0-9a-fA-F]{3,6}$/, "Invalid HEX color"),
   tenantId: z.string().optional(),
+  googleClientIdOverride: z.string().optional().nullable(),
+  googleClientSecretOverride: z.string().optional().nullable(),
+  lineChannelIdOverride: z.string().optional().nullable(),
+  lineChannelSecretOverride: z.string().optional().nullable(),
 });
 
 export const registerUserSchema = z.object({

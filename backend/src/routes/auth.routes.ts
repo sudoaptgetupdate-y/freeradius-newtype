@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { login, impersonate, exitImpersonate } from "../controllers/auth.controller";
+import { socialLoginRedirect, socialLoginCallback } from "../controllers/social-auth.controller";
 import { loginSchema } from "../services/auth.service";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
@@ -29,4 +30,8 @@ export default async function authRoutes(app: FastifyInstance) {
   fastify.post("/exit-impersonate", {
     onRequest: [fastify.authenticate],
   }, exitImpersonate);
+
+  // --- Social Login Routes (Public) ---
+  fastify.get("/:tenantId/social-auth/:provider", socialLoginRedirect);
+  fastify.get("/social/callback/:provider", socialLoginCallback);
 }

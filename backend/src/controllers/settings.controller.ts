@@ -25,6 +25,10 @@ export const settingsSchema = z.object({
   smtpPassword: emptyToNull,
   smtpSender: emptyToNullEmail,
   timezone: z.string().default("Asia/Bangkok"),
+  googleClientId: emptyToNull,
+  googleClientSecret: emptyToNull,
+  lineChannelId: emptyToNull,
+  lineChannelSecret: emptyToNull,
 });
 
 export const getSettings = async (request: FastifyRequest, reply: FastifyReply) => {

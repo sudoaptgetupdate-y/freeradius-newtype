@@ -14,6 +14,13 @@ export const tenantPortalSettings = pgTable("tenant_portal_settings", {
   leftBgColor: varchar("left_bg_color", { length: 10 }).notNull().default("#071D33"),
   leftTextColor: varchar("left_text_color", { length: 10 }).notNull().default("#FFFFFF"),
   leftAccentColor: varchar("left_accent_color", { length: 10 }).notNull().default("#F59E0B"),
+
+  // Social Login Overrides (Tenant-Specific)
+  googleClientIdOverride: text("google_client_id_override"),
+  googleClientSecretOverride: text("google_client_secret_override"),
+  lineChannelIdOverride: text("line_channel_id_override"),
+  lineChannelSecretOverride: text("line_channel_secret_override"),
+
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

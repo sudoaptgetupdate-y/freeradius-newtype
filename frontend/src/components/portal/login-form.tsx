@@ -167,7 +167,14 @@ export function LoginForm({ tenantId, settings, onRegisterClick }: LoginFormProp
   }
 
   const handleSocialLogin = (provider: "google" | "line") => {
-    toast.info(`Login with ${provider} will be available in the next update.`)
+    const baseUrl = import.meta.env.VITE_API_URL || "";
+    const params = new URLSearchParams();
+    if (linkLogin) params.append("linkLogin", linkLogin);
+    if (mac) params.append("mac", mac);
+    if (ip) params.append("ip", ip);
+    if (dst) params.append("dst", dst);
+
+    window.location.href = `${baseUrl}/api/v1/auth/${tenantId}/social-auth/${provider}?${params.toString()}`;
   }
 
   return (

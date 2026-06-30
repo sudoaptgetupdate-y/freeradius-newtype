@@ -28,6 +28,12 @@ export const globalSettings = pgTable("global_settings", {
   // General Config
   timezone: text("timezone").default("Asia/Bangkok"),
   
+  // Social Login Config (Global Fallbacks)
+  googleClientId: text("google_client_id"),
+  googleClientSecret: text("google_client_secret"),
+  lineChannelId: text("line_channel_id"),
+  lineChannelSecret: text("line_channel_secret"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
