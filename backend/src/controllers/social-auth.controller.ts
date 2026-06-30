@@ -40,13 +40,13 @@ export const socialLoginRedirect = async (
     return reply.code(400).send({ error: `${provider} login is not configured for this tenant.` });
   }
 
-  // Pack the state
+  const query = request.query as any;
   const stateObj = {
     tenantId,
-    linkLogin: request.query["link-login"] || request.query.linkLogin || "",
-    mac: request.query.mac || "",
-    ip: request.query.ip || "",
-    dst: request.query.dst || "",
+    linkLogin: query["link-login"] || query.linkLogin || "",
+    mac: query.mac || "",
+    ip: query.ip || "",
+    dst: query.dst || "",
   };
   const state = Buffer.from(JSON.stringify(stateObj)).toString("base64url");
   
@@ -68,7 +68,8 @@ export const socialLoginCallback = async (
   reply: FastifyReply
 ) => {
   const { provider } = request.params;
-  const { code, state, error } = request.query;
+  const query = request.query as any;
+  const { code, state, error } = query;
 
   if (error || !code || !state) {
     return reply.code(400).send({ error: error || "Missing code or state" });
