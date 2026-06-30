@@ -31,6 +31,11 @@
 - ตัวอย่างเช่น: `SELECT ... WHERE username = '%{SQL-User-Name}' AND tenant_id = '...'`
 - ป้องกันการนำบัญชีของ Site A ไปใช้ล็อกอินข้าม Site ไปยัง Site B 
 
+### 2.3 Captive Portal & External Registration (ระบบล็อกอินภายนอกและการสมัครสมาชิก)
+- ข้อมูลการตกแต่งหน้าล็อกอินและฟังก์ชันของหน้าลงทะเบียนจะถูกบันทึกแยกรายผู้เช่าในตาราง `tenant_portal_settings`
+- การล็อกอินผ่านโซเชียลมีเดีย (Google/LINE) จะใช้วิธีนำ ID Token ที่ได้ยืนยันความถูกต้องแล้ว ไปทำการสร้างหรือค้นหาบัญชี FreeRADIUS `radcheck` ในระดับหลังบ้าน จากนั้นจะตอบกลับ Username/Password ชุดที่ผูกกับ Tenant กลับไปยังหน้า Portal เพื่อล็อกอิน Hotspot ทันที
+- รายละเอียดสถาปัตยกรรมและการตั้งค่า Walled Garden เพิ่มเติมดูได้ที่ [captive_portal_and_registration.md](file:///d:/1.Development/dev-frd/docs/captive_portal_and_registration.md)
+
 ---
 
 ## 3. Logging Architecture (สถาปัตยกรรมการจัดการ Log)

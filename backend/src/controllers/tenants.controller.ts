@@ -1,7 +1,9 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
 import { tenants } from "../schema/tenants";
-import { eq } from "drizzle-orm";
+import { radgroupreply, radgroupcheck, radusergroup, radcheck } from "../schema/freeradius";
+import { nas } from "../schema/nas";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { admins } from "../schema/admins";
@@ -10,12 +12,18 @@ const tenantSchema = z.object({
   name: z.string().min(1).max(255),
   maxUsers: z.number().min(1).default(100),
   maxNas: z.number().min(1).default(1),
+  primaryDeviceType: z.enum(["mikrotik", "fortigate", "standard"]).default("mikrotik"),
+  defaultRegisterProfile: z.string().max(255).optional().nullable(),
   status: z.enum(["active", "suspended"]).default("active"),
   allowLogAccess: z.boolean().default(false),
   telegramChatId: z.string().max(100).optional(),
   telegramEnabled: z.boolean().default(false),
   adminEmail: z.string().email().optional(),
   adminPassword: z.string().min(1).optional(),
+});
+
+const updateTenantSchema = tenantSchema.partial().extend({
+  migrateLegacyUsers: z.boolean().optional(),
 });
 
 export const getTenants = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -35,9 +43,29 @@ export const createTenant = async (request: FastifyRequest, reply: FastifyReply)
     // Separate tenant data and admin data
     const { adminEmail, adminPassword, ...tenantData } = data;
 
+    let defaultProfile = tenantData.defaultRegisterProfile;
+    if (!defaultProfile || defaultProfile === "none") {
+      const suffix = tenantData.primaryDeviceType === "fortigate" ? "FortiGate" : (tenantData.primaryDeviceType === "standard" ? "Standard" : "MikroTik");
+      defaultProfile = `Default-${suffix}`;
+      tenantData.defaultRegisterProfile = defaultProfile;
+    }
+
     // Use transaction to ensure both are created
     const newTenant = await db.transaction(async (tx) => {
       const [insertedTenant] = await tx.insert(tenants).values(tenantData).returning();
+
+      if (!insertedTenant) {
+        throw new Error("Failed to insert tenant");
+      }
+
+      // Auto-provision the default profile marker attribute
+      await tx.insert(radgroupreply).values({
+        tenantId: insertedTenant.id,
+        groupname: defaultProfile as string,
+        attribute: "Class",
+        op: "=",
+        value: defaultProfile as string,
+      });
 
       if (adminEmail && adminPassword) {
         // Check if admin email already exists
@@ -73,21 +101,51 @@ export const createTenant = async (request: FastifyRequest, reply: FastifyReply)
 export const updateTenant = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
   try {
     const { id } = request.params;
-    const data = tenantSchema.partial().parse(request.body);
-    const [updatedTenant] = await db
-      .update(tenants)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(tenants.id, id))
-      .returning();
+    const data = updateTenantSchema.parse(request.body);
+    const { migrateLegacyUsers, ...updateData } = data;
 
-    if (!updatedTenant) {
-      return reply.status(404).send({ error: "Tenant not found" });
-    }
+    const updatedTenant = await db.transaction(async (tx) => {
+      const existingTenant = await tx.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+      if (existingTenant.length === 0) {
+        throw new Error("Tenant not found");
+      }
+
+      const oldDefault = existingTenant[0]!.defaultRegisterProfile;
+      let newDefault = updateData.defaultRegisterProfile ?? oldDefault;
+      if (newDefault === "none") {
+        newDefault = oldDefault;
+        updateData.defaultRegisterProfile = oldDefault;
+      }
+
+      const [updated] = await tx
+        .update(tenants)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(tenants.id, id))
+        .returning();
+
+      if (migrateLegacyUsers && oldDefault && newDefault && oldDefault !== newDefault) {
+        await tx
+          .update(radusergroup)
+          .set({ groupname: newDefault })
+          .where(
+            and(
+              eq(radusergroup.tenantId, id),
+              eq(radusergroup.groupname, oldDefault)
+            )
+          );
+      }
+
+      return updated;
+    });
+
     reply.send(updatedTenant);
   } catch (error: any) {
     request.log.error(error);
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: "Validation error", details: error.errors });
+    }
+    if (error.message === "Tenant not found") {
+      return reply.status(404).send({ error: "Tenant not found" });
     }
     reply.status(500).send({ error: "Failed to update tenant" });
   }
@@ -103,7 +161,23 @@ export const deleteTenant = async (request: FastifyRequest<{ Params: { id: strin
       return reply.status(404).send({ error: "Tenant not found" });
     }
 
-    const newStatus = tenant[0].status === "active" ? "suspended" : "active";
+    // Check if there are any NAS or Users (radcheck) associated with this tenant
+    const nasCount = await db.select().from(nas).where(eq(nas.tenantId, id)).limit(1);
+    const userCount = await db.select().from(radcheck).where(eq(radcheck.tenantId, id)).limit(1);
+
+    if (nasCount.length === 0 && userCount.length === 0) {
+      // CONDITIONAL HARD DELETE: No usage yet, safe to delete entirely
+      await db.transaction(async (tx) => {
+        await tx.delete(admins).where(eq(admins.tenantId, id));
+        await tx.delete(radgroupreply).where(eq(radgroupreply.tenantId, id));
+        await tx.delete(radgroupcheck).where(eq(radgroupcheck.tenantId, id));
+        await tx.delete(radusergroup).where(eq(radusergroup.tenantId, id));
+        await tx.delete(tenants).where(eq(tenants.id, id));
+      });
+      return reply.send({ success: true, message: "Tenant deleted permanently" });
+    }
+
+    const newStatus = tenant[0]!.status === "active" ? "suspended" : "active";
 
     // Toggle status
     const [updatedTenant] = await db

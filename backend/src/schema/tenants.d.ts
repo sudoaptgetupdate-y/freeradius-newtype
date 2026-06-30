@@ -72,6 +72,44 @@ export declare const tenants: import("drizzle-orm/pg-core").PgTableWithColumns<{
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        primaryDeviceType: import("drizzle-orm/pg-core").PgColumn<{
+            name: "primary_device_type";
+            tableName: "tenants";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: "mikrotik" | "fortigate" | "standard";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["mikrotik", "fortigate", "standard"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
+        defaultRegisterProfile: import("drizzle-orm/pg-core").PgColumn<{
+            name: "default_register_profile";
+            tableName: "tenants";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 255;
+        }>;
         status: import("drizzle-orm/pg-core").PgColumn<{
             name: "status";
             tableName: "tenants";

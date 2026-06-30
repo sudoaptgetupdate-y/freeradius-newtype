@@ -64,7 +64,7 @@
 
 ### 3.4 Core Network & Infrastructure Module
 *   **REQ-CORE-01 (NAS Management):** จัดการอุปกรณ์ NAS ของ Tenant พร้อมตัวเลือกกำหนด **Vendor Type (เช่น Mikrotik, Fortigate, Cisco, Other)** เพื่อให้ระบบจ่าย Radius Attributes และทำ Log Parsing ได้ตรงตามยี่ห้อของอุปกรณ์
-*   **REQ-CORE-02 (Radius Profiles):** สร้างและจัดการแพ็กเกจอินเทอร์เน็ต (Group) ตามความเร็วหรือระยะเวลา
+*   **REQ-CORE-02 (Radius Profiles):** สร้างและจัดการแพ็กเกจอินเทอร์เน็ต (Group) โดยมี UI รองรับ 3 รูปแบบ คือ (1) MikroTik Template สำหรับจัดการ Rate-Limit, (2) Standard Enterprise Template สำหรับจัดการ 802.1X VLAN Assignment และ (3) Advanced Custom Mode สำหรับกำหนด VSA แบบ Manual
 *   **REQ-CORE-03 (Organizations):** สร้างและจัดการ "องค์กรย่อย" ภายใน Tenant เพื่อผูก Radius Profile เริ่มต้น
 *   **REQ-CORE-04 (802.1X / WPA-Enterprise):** รองรับระบบการยืนยันตัวตนไร้สายระดับองค์กร (802.1X, EAP-PEAP, MS-CHAPv2) ให้ใช้งานแบบ Seamless ควบคู่กับ Hotspot (Captive Portal) โดยใช้ฐานข้อมูล User ชุดเดียวกัน พร้อมรองรับการทำ **Dynamic VLAN Assignment** ผ่านการจ่าย Radius Attributes
 *   **REQ-CORE-05 (802.1X Advanced Configurations):** เพื่อเสถียรภาพระดับองค์กร ระบบต้องครอบคลุมฟังก์ชันดังต่อไปนี้:

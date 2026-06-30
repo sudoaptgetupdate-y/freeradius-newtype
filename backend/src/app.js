@@ -14,6 +14,8 @@ import { adminsRoutes } from "./routes/admins.routes";
 import vouchersRoutes from "./routes/vouchers.routes";
 import webhooksRoutes from "./routes/webhooks.routes";
 import settingsRoutes from "./routes/settings.routes";
+import dictionaryRoutes from "./routes/dictionary.routes";
+import portalRoutes from "./routes/portal.routes";
 import "./workers/voucher.worker";
 export const buildApp = async () => {
     const app = fastify({
@@ -32,10 +34,12 @@ export const buildApp = async () => {
             });
         }
         request.log.error(error);
-        return reply.status(500).send({
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "An unexpected error occurred",
+        const err = error;
+        const statusCode = err.statusCode || 500;
+        return reply.status(statusCode).send({
+            statusCode,
+            error: err.name || "Internal Server Error",
+            message: err.message || "An unexpected error occurred",
         });
     });
     // Register Plugins
@@ -48,7 +52,7 @@ export const buildApp = async () => {
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     });
     await app.register(rateLimit, {
-        max: 100,
+        max: 500,
         timeWindow: '1 minute'
     });
     await app.register(jwtPlugin);
@@ -60,10 +64,12 @@ export const buildApp = async () => {
     app.register(nasRoutes, { prefix: "/api/v1/nas" });
     app.register(profilesRoutes, { prefix: "/api/v1/profiles" });
     app.register(adminsRoutes, { prefix: "/api/v1/admins" });
+    app.register(dictionaryRoutes, { prefix: "/api/v1/dictionary" });
     // Register Skeleton Features
     app.register(vouchersRoutes, { prefix: "/api/v1/vouchers" });
     app.register(webhooksRoutes, { prefix: "/api/v1/webhooks" });
     app.register(settingsRoutes, { prefix: "/api/v1/settings" });
+    app.register(portalRoutes, { prefix: "/api/v1/portal" });
     // Healthcheck Route
     app.get("/health", async () => {
         return { status: "ok" };

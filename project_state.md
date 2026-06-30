@@ -77,7 +77,18 @@
     - Updated documentation (`docs/freeradius_multitenant_sql_config.md`) with production-ready PostgreSQL queries using `${....event_timestamp}` to solve Date/Time literal formatting issues.
     - Designed and documented the **Hybrid Logging Architecture** (Centralized SaaS Loki vs Dedicated/BYO Loki) in `architecture_design.md` and `system_requirements.md` to support Enterprise deployments.
     - Resolved database session timezone discrepancy (+7 hours shift in Web UI) by setting default database timezone to `UTC` (`ALTER DATABASE radius SET timezone TO 'UTC';`), updating `freeradius_complete_setup_guide.md` and `architecture_design.md` to ensure standardized datetime display.
-
+17. **Profiles Wizard Refactor & FortiGate Integration:**
+    - Refactored the Add/Edit Profile Dialog into a 3-step wizard layout (General Info -> Limits -> Configuration) to resolve overflow issues.
+    - Implemented a marker attribute (`Class = <Groupname>`) in the backend database mapping to persist empty profiles and prevent deletion issues.
+    - Integrated a dedicated **FortiGate Template** in the wizard UI and backend, sending `Fortinet-Group-Name` back to FortiGate to pair with local Traffic Shapers on the firewall.
+    - Documented all RADIUS Attribute and Package configurations in `docs/attributes_and_packages.md`.
+18. **Captive Portal Settings, Self-Registration & Portal Login (Phase 13):**
+    - Created `tenant_portal_settings` database schema with Drizzle migrations to store tenant branding assets (Logo, Org Name, Theme Color, Terms of Service).
+    - Developed backend controllers and routes handling dynamic portal settings retrieval, updates, and public self-registration.
+    - Implemented transaction-safe self-registration adding credentials to `radcheck` and mapping users to the tenant's `defaultRegisterProfile` in `radusergroup` with custom registration details stored as attributes in `radreply`.
+    - Created **Portal Settings** management UI inside the dashboard layout enabling Tenant Admins to customize portal colors, branding assets, configure switches for registration/social logins, and copy the registration URL.
+    - Built a responsive, mobile-first **Public Registration Page** carrying over query parameters for seamless authentication redirections.
+    - Built a public **Portal Login Page** with dynamic styling that detects and supports multi-vendor Hotspot login submission flows (Mikrotik, Fortigate, Cisco Meraki, Aruba, and generic fallback devices) by automatically posting user credentials back to the gateway.
 
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.
@@ -94,8 +105,8 @@
 - However, several critical requirements from the SRS are still pending implementation to achieve true MVP for a SaaS Hotspot system.
 
 ### 🎯 Next Steps & Pending Phases:
-1. **Phase 13: Captive Portal & Ads (REQ-PORTAL-01, 02)**
-   - Create public-facing Hotspot login pages with Dynamic Theme support based on `nas_mac`.
+1. **Phase 13: Captive Portal Social Login & Ads (REQ-PORTAL-01, 02)**
+   - Implement External Social Login integrations (Google OAuth 2.0 and LINE Login) for the public login page.
    - Implement pre-login advertisement logic.
 3. **Phase 14: End-User Self-Care Portal (REQ-USER-05)**
    - Build a dashboard for internet users to check quota, change passwords, and self-disconnect sessions via RADIUS CoA.

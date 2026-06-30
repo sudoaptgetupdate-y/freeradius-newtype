@@ -9,6 +9,8 @@ export const generateVouchersSchema = z.object({
     prefix: z.string().max(10).optional(),
     tenantId: z.string().uuid().optional(),
     type: z.enum(["code", "user_pass"]).optional().default("code"),
+    codeLength: z.number().min(4).max(16).optional().default(6),
+    passwordLength: z.number().min(4).max(16).optional().default(6),
 });
 export const generateVouchers = async (request, reply) => {
     const user = request.user;
@@ -29,6 +31,8 @@ export const generateVouchers = async (request, reply) => {
         groupname: body.groupname,
         prefix: body.prefix,
         type: body.type,
+        codeLength: body.codeLength,
+        passwordLength: body.passwordLength,
     });
     return reply.code(202).send({ message: "Voucher generation started", jobId: job.id });
 };

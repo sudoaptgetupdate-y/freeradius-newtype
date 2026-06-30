@@ -1,0 +1,1 @@
+{"version":3,"file":"dictionary.controller.d.ts","sourceRoot":"","sources":["dictionary.controller.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAc5D,eAAO,MAAM,aAAa,GAAU,SAAS,cAAc,EAAE,OAAO,YAAY,kBA8B/E,CAAC;AAEF,eAAO,MAAM,yBAAyB,GAAU,SAAS,cAAc,EAAE,OAAO,YAAY,uBAyB3F,CAAC;AAEF,eAAO,MAAM,yBAAyB,GAAU,SAAS,cAAc,EAAE,OAAO,YAAY,uBA6B3F,CAAC"}

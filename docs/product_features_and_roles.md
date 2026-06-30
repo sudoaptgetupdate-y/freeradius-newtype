@@ -55,7 +55,10 @@
 ### 2.2 Infrastructure & Packages
 - **NAS (Network Access Server):** เพิ่มอุปกรณ์ Router/Firewall ของไซต์ตนเอง โดยต้องเลือกว่าเป็นยี่ห้อใด (เช่น Mikrotik, Fortigate, หรือ Other) เพื่อให้ระบบส่งค่าความเร็วและดึง Log ได้ถูกต้อง
 - **Authentication Mode (802.1X vs Hotspot):** สามารถเปิด-ปิดโหมดการยืนยันตัวตนระดับองค์กร (WPA2/WPA3-Enterprise) เพื่อให้พนักงานกรอก Username/Password ฝังในเครื่องโดยไม่ต้องผ่านหน้าเว็บ หรือใช้งานควบคู่กับหน้า Hotspot ได้พร้อมกัน
-- **Radius Profiles:** สร้างแพ็กเกจอินเทอร์เน็ต (เช่น 100M/50M) กำหนดความเร็ว, เวลาหมดอายุ, **จำกัดจำนวนอุปกรณ์เชื่อมต่อพร้อมกัน (Simultaneous-Use)**, และสามารถ **กำหนด VLAN ID (Dynamic VLAN)** สำหรับ 802.1X
+- **Radius Profiles (Internet Packages):** สร้างแพ็กเกจอินเทอร์เน็ต โดยระบบออกแบบ UI/UX เป็น 3 โหมดเพื่อความยืดหยุ่น:
+  - **1) MikroTik Template:** กรอกฟอร์มสำเร็จรูปสำหรับบีบความเร็ว (Rate-Limit), จำกัดเวลา (Session-Timeout), และจำกัดอุปกรณ์พร้อมกัน (Simultaneous-Use)
+  - **2) Standard Enterprise Template (802.1X):** สำหรับอุปกรณ์ Enterprise (Cisco, Fortigate, Aruba) กรอกเฉพาะเลข VLAN ID ระบบจะแปลงเป็นมาตรฐาน RFC (Tunnel-Type, Tunnel-Private-Group-Id) ให้อัตโนมัติ
+  - **3) Advanced Custom Mode:** ตารางเปล่าสำหรับกรอก VSA (Vendor-Specific Attributes) ด้วยตนเองเพื่อรองรับอุปกรณ์แปลกๆ แบบไม่จำกัดค่าย
 - **MAC Bypass (MAB) / IoT Devices:** หน้าต่างสำหรับให้แอดมินนำ MAC Address ของอุปกรณ์ที่พิมพ์รหัสผ่านไม่ได้ (ปริ้นเตอร์, กล้องวงจรปิด) มาลงทะเบียนเพื่อให้อุปกรณ์เชื่อมต่อ 802.1X ผ่านเข้า VLAN ได้ทันที
 - **Organizations:** สร้างองค์กรย่อยภายใน Site (เช่น แผนก, ตึก) เพื่อประยุกต์ใช้แพ็กเกจเน็ตแบบกลุ่ม
 
@@ -69,9 +72,15 @@
 - **NAS Monitoring:** ดูสถานะการใช้ CPU, อุณหภูมิ, และการแจก IP ภายใน Router ของสาขาตนเอง
 
 ### 2.5 Captive Portal & Advertisements (การปรับแต่ง)
-- **Portal Customization:** อัปโหลดโลโก้, เปลี่ยนสีพื้นหลัง, เปลี่ยนข้อความ ให้เข้ากับแบรนด์ของธุรกิจตนเอง (ระบบจะแสดงผลอัตโนมัติตาม NAS ที่ลูกค้าเชื่อมต่อ)
+- **Portal Customization & Settings:** แผงตั้งค่าหน้ารวมล็อกอินและลงทะเบียนของ Tenant แต่ละแห่ง (ตาราง `tenant_portal_settings`) เพื่อแยกภาพลักษณ์แบรนด์ (Tenant Branding) ได้แก่:
+  - **Logo & Info:** อัปโหลดโลโก้หน่วยงาน, กำหนดชื่อแสดงผล (Org Name), และข้อความหมายเหตุแถบล่างหน้าจอ (Footer Note)
+  - **Theme Customization:** กำหนดรหัสสีธีม (Primary Color) สำหรับควบคุมหน้าตาของปุ่มกดและฟังก์ชันหน้าเว็บ
+  - **Terms of Service (TOS):** แอดมินสามารถอัปเดตข้อตกลงและเงื่อนไขการใช้งาน (HTML/Markdown) เพื่อบังคับให้ผู้ใช้งานกดยอมรับก่อนเข้าเล่นเน็ตหรือลงทะเบียน
+- **External / Social Login:** เปิด-ปิด ฟังก์ชันลงชื่อเข้าใช้งานด้วยเครือข่ายโซเชียล โดยระบบรองรับบริการภายนอกที่ไม่มีค่าใช้จ่ายแอบแฝง:
+  - **Google Login:** ตรวจสอบและลงทะเบียนเข้าเน็ตอัตโนมัติด้วย Gmail/Google API
+  - **LINE Login:** ยืนยันตัวตนผ่าน LINE Developers รองรับระบบ Auto-Login ไร้รอยต่อหากเปิดเว็บในแอปพลิเคชัน LINE
+- **Self-Registration (สมัครสมาชิก):** เปิด-ปิด หน้าสมัครเข้าใช้เน็ตด้วยตนเองผ่านแบบฟอร์มหน้าเว็บ โดยผู้ใช้งานที่สมัครจะถูกผูกเข้ากับ `defaultRegisterProfile` ในตาราง `radusergroup` หลังบ้านโดยอัตโนมัติ
 - **Advertisement:** สร้างโฆษณาก่อนเข้าใช้งานเน็ต กำหนดเวลา Countdown
-- **Registration Settings:** เปิด/ปิด ฟังก์ชันให้แขกสมัครสมาชิกรับรหัสผ่านด้วยตนเองหน้าเว็บ
 
 ### 2.6 Security & Admin Settings
 - **Administrators:** สร้างบัญชีผู้ดูแลระบบย่อยภายใน Site ของตนเอง (เช่น พนักงานต้อนรับ, ช่างไอที)

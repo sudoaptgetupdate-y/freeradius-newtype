@@ -3,4 +3,5 @@ export declare const getUsers: (request: FastifyRequest, reply: FastifyReply) =>
 export declare const createUser: (request: FastifyRequest, reply: FastifyReply) => Promise<undefined>;
 export declare const updateUser: (request: FastifyRequest, reply: FastifyReply) => Promise<undefined>;
 export declare const deleteUser: (request: FastifyRequest, reply: FastifyReply) => Promise<undefined>;
+export declare const getUserDetails: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 //# sourceMappingURL=users.controller.d.ts.map

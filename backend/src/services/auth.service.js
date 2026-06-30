@@ -21,11 +21,23 @@ export const authService = {
         if (!isPasswordValid) {
             throw new Error("Invalid email or password");
         }
+        let tenantSettings = {};
+        if (admin.tenantId) {
+            const { tenants } = await import("../schema/tenants");
+            const tenant = await db.select().from(tenants).where(eq(tenants.id, admin.tenantId)).limit(1);
+            if (tenant.length > 0 && tenant[0]) {
+                tenantSettings = {
+                    primaryDeviceType: tenant[0].primaryDeviceType,
+                    defaultRegisterProfile: tenant[0].defaultRegisterProfile,
+                };
+            }
+        }
         return {
             id: admin.id,
             email: admin.email,
             role: admin.role,
             tenantId: admin.tenantId,
+            ...tenantSettings,
         };
     }
 };

@@ -4,12 +4,22 @@ import { radgroupreply, radgroupcheck, radusergroup } from "../schema/freeradius
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
+const advancedAttributeSchema = z.object({
+  attribute: z.string().min(1, "Attribute name is required"),
+  op: z.string().min(1, "Operator is required"),
+  value: z.string(),
+  type: z.enum(["check", "reply"])
+});
+
 const profileSchema = z.object({
   name: z.string().min(1, "Profile name is required"),
   downloadSpeed: z.string().optional(), // e.g. "10M"
   uploadSpeed: z.string().optional(),   // e.g. "10M"
   sessionTimeout: z.number().optional(), // in seconds
   sharedUsers: z.number().optional(),    // Simultaneous-Use
+  vlanId: z.string().optional(),         // Tunnel-Private-Group-Id
+  fortiGroupName: z.string().optional(), // Fortinet-Group-Name
+  advancedAttributes: z.array(advancedAttributeSchema).optional(),
   tenantId: z.string().optional(),       // Required if super admin
 });
 
@@ -44,7 +54,10 @@ export const getProfiles = async (request: FastifyRequest, reply: FastifyReply) 
           downloadSpeed: "",
           uploadSpeed: "",
           sessionTimeout: null,
-          sharedUsers: null
+          sharedUsers: null,
+          vlanId: "",
+          fortiGroupName: "",
+          advancedAttributes: [] as { attribute: string, op: string, value: string, type: 'check' | 'reply' }[]
         });
       }
       return profilesMap.get(key);
@@ -60,6 +73,12 @@ export const getProfiles = async (request: FastifyRequest, reply: FastifyReply) 
           p.uploadSpeed = parts[0];
           p.downloadSpeed = parts[1];
         }
+      } else if (row.attribute === "Tunnel-Private-Group-Id") {
+        p.vlanId = row.value;
+      } else if (row.attribute === "Fortinet-Group-Name") {
+        p.fortiGroupName = row.value;
+      } else if (row.attribute !== "Tunnel-Type" && row.attribute !== "Tunnel-Medium-Type" && row.attribute !== "Class") {
+        p.advancedAttributes.push({ attribute: row.attribute, op: row.op, value: row.value, type: 'reply' });
       }
     });
 
@@ -70,6 +89,8 @@ export const getProfiles = async (request: FastifyRequest, reply: FastifyReply) 
         p.sharedUsers = parseInt(row.value, 10);
       } else if (row.attribute === "Session-Timeout") {
         p.sessionTimeout = parseInt(row.value, 10);
+      } else {
+        p.advancedAttributes.push({ attribute: row.attribute, op: row.op, value: row.value, type: 'check' });
       }
     });
 
@@ -102,6 +123,15 @@ export const createProfile = async (request: FastifyRequest, reply: FastifyReply
     }
 
     // Prepare inserts
+    // Always insert a marker attribute so the profile exists even if empty
+    await db.insert(radgroupreply).values({
+      tenantId: targetTenantId,
+      groupname: data.name,
+      attribute: "Class",
+      op: "=",
+      value: data.name
+    });
+
     if (data.downloadSpeed && data.uploadSpeed) {
       await db.insert(radgroupreply).values({
         tenantId: targetTenantId,
@@ -132,10 +162,40 @@ export const createProfile = async (request: FastifyRequest, reply: FastifyReply
       });
     }
 
+    if (data.vlanId) {
+      await db.insert(radgroupreply).values([
+        { tenantId: targetTenantId, groupname: data.name, attribute: "Tunnel-Type", op: "=", value: "VLAN" },
+        { tenantId: targetTenantId, groupname: data.name, attribute: "Tunnel-Medium-Type", op: "=", value: "IEEE-802" },
+        { tenantId: targetTenantId, groupname: data.name, attribute: "Tunnel-Private-Group-Id", op: "=", value: data.vlanId }
+      ]);
+    }
+
+    if (data.fortiGroupName) {
+      await db.insert(radgroupreply).values({
+        tenantId: targetTenantId,
+        groupname: data.name,
+        attribute: "Fortinet-Group-Name",
+        op: "=",
+        value: data.fortiGroupName
+      });
+    }
+
+    if (data.advancedAttributes && data.advancedAttributes.length > 0) {
+      const checkInserts = data.advancedAttributes.filter(a => a.type === 'check').map(a => ({
+        tenantId: targetTenantId, groupname: data.name, attribute: a.attribute, op: a.op, value: a.value
+      }));
+      const replyInserts = data.advancedAttributes.filter(a => a.type === 'reply').map(a => ({
+        tenantId: targetTenantId, groupname: data.name, attribute: a.attribute, op: a.op, value: a.value
+      }));
+
+      if (checkInserts.length > 0) await db.insert(radgroupcheck).values(checkInserts);
+      if (replyInserts.length > 0) await db.insert(radgroupreply).values(replyInserts);
+    }
+
     reply.status(201).send({ message: "Profile created successfully" });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     request.log.error(error);
     reply.status(500).send({ error: "Internal Server Error" });
@@ -184,6 +244,15 @@ export const updateProfile = async (request: FastifyRequest, reply: FastifyReply
       );
 
       // 2. Insert new attributes with the (potentially new) name
+      // Always insert a marker attribute so the profile exists even if empty
+      await tx.insert(radgroupreply).values({
+        tenantId: targetTenantId,
+        groupname: data.name,
+        attribute: "Class",
+        op: "=",
+        value: data.name
+      });
+
       if (data.downloadSpeed && data.uploadSpeed) {
         await tx.insert(radgroupreply).values({
           tenantId: targetTenantId,
@@ -214,6 +283,36 @@ export const updateProfile = async (request: FastifyRequest, reply: FastifyReply
         });
       }
 
+      if (data.vlanId) {
+        await tx.insert(radgroupreply).values([
+          { tenantId: targetTenantId, groupname: data.name, attribute: "Tunnel-Type", op: "=", value: "VLAN" },
+          { tenantId: targetTenantId, groupname: data.name, attribute: "Tunnel-Medium-Type", op: "=", value: "IEEE-802" },
+          { tenantId: targetTenantId, groupname: data.name, attribute: "Tunnel-Private-Group-Id", op: "=", value: data.vlanId }
+        ]);
+      }
+  
+      if (data.fortiGroupName) {
+        await tx.insert(radgroupreply).values({
+          tenantId: targetTenantId,
+          groupname: data.name,
+          attribute: "Fortinet-Group-Name",
+          op: "=",
+          value: data.fortiGroupName
+        });
+      }
+
+      if (data.advancedAttributes && data.advancedAttributes.length > 0) {
+        const checkInserts = data.advancedAttributes.filter(a => a.type === 'check').map(a => ({
+          tenantId: targetTenantId, groupname: data.name, attribute: a.attribute, op: a.op, value: a.value
+        }));
+        const replyInserts = data.advancedAttributes.filter(a => a.type === 'reply').map(a => ({
+          tenantId: targetTenantId, groupname: data.name, attribute: a.attribute, op: a.op, value: a.value
+        }));
+  
+        if (checkInserts.length > 0) await tx.insert(radgroupcheck).values(checkInserts);
+        if (replyInserts.length > 0) await tx.insert(radgroupreply).values(replyInserts);
+      }
+
       // 3. Update radusergroup if the name has changed
       if (data.name !== data.oldName) {
         await tx.update(radusergroup)
@@ -225,7 +324,7 @@ export const updateProfile = async (request: FastifyRequest, reply: FastifyReply
     reply.send({ message: "Profile updated successfully" });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     request.log.error(error);
     reply.status(500).send({ error: "Internal Server Error" });

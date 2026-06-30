@@ -142,7 +142,8 @@ export function VouchersPage() {
   }, [user])
 
   useEffect(() => {
-    if (user?.role !== "super_admin" && user?.role !== "admin") {
+    if (!user) return
+    if (user.role !== "super_admin" && user.role !== "admin") {
       fetchSettings()
     } else if (formData.tenantId) {
       fetchSettings(formData.tenantId)

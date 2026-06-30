@@ -9,7 +9,7 @@ export default fp(async (fastify) => {
             await request.jwtVerify();
         }
         catch (err) {
-            reply.code(401).send({ error: "Unauthorized", message: "Invalid or missing token" });
+            return reply.code(401).send({ error: "Unauthorized", message: "Invalid or missing token" });
         }
     });
     fastify.decorate("requireSuperAdmin", async (request, reply) => {
@@ -17,11 +17,11 @@ export default fp(async (fastify) => {
             await request.jwtVerify();
             const user = request.user;
             if (user.role !== "super_admin") {
-                reply.code(403).send({ error: "Forbidden", message: "Super Admin access required" });
+                return reply.code(403).send({ error: "Forbidden", message: "Super Admin access required" });
             }
         }
         catch (err) {
-            reply.code(401).send({ error: "Unauthorized", message: "Invalid or missing token" });
+            return reply.code(401).send({ error: "Unauthorized", message: "Invalid or missing token" });
         }
     });
     fastify.decorate("requireTenantAdmin", async (request, reply) => {
@@ -29,11 +29,11 @@ export default fp(async (fastify) => {
             await request.jwtVerify();
             const user = request.user;
             if (user.role !== "tenant_admin" && user.role !== "super_admin") {
-                reply.code(403).send({ error: "Forbidden", message: "Tenant Admin access required" });
+                return reply.code(403).send({ error: "Forbidden", message: "Tenant Admin access required" });
             }
         }
         catch (err) {
-            reply.code(401).send({ error: "Unauthorized", message: "Invalid or missing token" });
+            return reply.code(401).send({ error: "Unauthorized", message: "Invalid or missing token" });
         }
     });
 });

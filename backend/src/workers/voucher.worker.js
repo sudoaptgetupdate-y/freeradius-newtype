@@ -14,7 +14,7 @@ const generatePin = (length) => {
     return pin;
 };
 export const voucherWorker = new Worker("voucher_generation", async (job) => {
-    const { tenantId, prefix, amount, groupname, type } = job.data;
+    const { tenantId, prefix, amount, groupname, type, codeLength, passwordLength } = job.data;
     // Create Batch
     const batch = await db.insert(voucherBatches).values({
         tenantId,
@@ -30,7 +30,7 @@ export const voucherWorker = new Worker("voucher_generation", async (job) => {
         let isUnique = false;
         let attempts = 0;
         while (!isUnique && attempts < 5) {
-            code = (prefix || "") + generatePin(6); // Total length varies
+            code = (prefix || "") + generatePin(codeLength || 6); // Total length varies
             // Check uniqueness in radcheck
             const existing = await db.query.radcheck.findFirst({
                 where: (fields, { eq, and }) => and(eq(fields.tenantId, tenantId), eq(fields.username, code)),
@@ -43,7 +43,7 @@ export const voucherWorker = new Worker("voucher_generation", async (job) => {
         if (!isUnique) {
             throw new Error("Failed to generate unique code after 5 attempts");
         }
-        const password = (type === "user_pass") ? generatePin(6) : code;
+        const password = (type === "user_pass") ? generatePin(passwordLength || 6) : code;
         // Insert to vouchers table
         await db.insert(vouchers).values({
             batchId,

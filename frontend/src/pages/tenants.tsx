@@ -42,6 +42,8 @@ type TenantData = {
   maxUsers: number
   maxNas: number
   status: string
+  primaryDeviceType?: "mikrotik" | "fortigate" | "standard"
+  defaultRegisterProfile?: string | null
   createdAt: string
 }
 
@@ -54,12 +56,15 @@ export default function TenantsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null)
+  const [originalDeviceType, setOriginalDeviceType] = useState<string | undefined>(undefined)
 
   const [formData, setFormData] = useState({
     name: "",
     maxUsers: 100,
     maxNas: 1,
     status: "active",
+    primaryDeviceType: "mikrotik",
+    defaultRegisterProfile: "",
     adminEmail: "",
     adminPassword: ""
   })
@@ -73,16 +78,41 @@ export default function TenantsPage() {
     }
   }
 
+  const [profiles, setProfiles] = useState<any[]>([])
+  const fetchProfiles = async () => {
+    try {
+      const res = await api.get("/profiles")
+      setProfiles(res.data)
+    } catch (error) {
+      console.error("Failed to fetch profiles:", error)
+    }
+  }
+
   useEffect(() => {
     fetchTenants()
+    fetchProfiles()
   }, [])
 
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    let migrateLegacyUsers = false;
+    if (editingTenantId && formData.primaryDeviceType !== originalDeviceType) {
+      const result = await MySwal.fire({
+        title: 'Migrate Users?',
+        text: 'You have changed the Primary Device Type. Do you want to migrate existing users from the old default profile to the new default profile?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, migrate them',
+        cancelButtonText: 'No, just update'
+      })
+      if (result.isConfirmed) migrateLegacyUsers = true;
+    }
+
     setIsLoading(true)
     try {
       if (editingTenantId) {
-        const payload: any = { ...formData }
+        const payload: any = { ...formData, migrateLegacyUsers }
         // Admin fields are not updated through this endpoint
         delete payload.adminEmail
         delete payload.adminPassword
@@ -91,7 +121,7 @@ export default function TenantsPage() {
         await api.post("/tenants", formData)
       }
       setIsDialogOpen(false)
-      setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", adminEmail: "", adminPassword: "" })
+      setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", primaryDeviceType: "mikrotik", defaultRegisterProfile: "", adminEmail: "", adminPassword: "" })
       setEditingTenantId(null)
       toast.success(editingTenantId ? "Tenant updated successfully!" : "Tenant created successfully!")
       fetchTenants()
@@ -105,17 +135,20 @@ export default function TenantsPage() {
 
   const handleOpenCreate = () => {
     setEditingTenantId(null)
-    setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", adminEmail: "", adminPassword: "" })
+    setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", primaryDeviceType: "mikrotik", defaultRegisterProfile: "none", adminEmail: "", adminPassword: "" })
     setIsDialogOpen(true)
   }
 
   const handleOpenEdit = (tenant: TenantData) => {
     setEditingTenantId(tenant.id)
+    setOriginalDeviceType(tenant.primaryDeviceType)
     setFormData({
       name: tenant.name,
       maxUsers: tenant.maxUsers,
       maxNas: tenant.maxNas,
       status: tenant.status,
+      primaryDeviceType: tenant.primaryDeviceType || "mikrotik",
+      defaultRegisterProfile: tenant.defaultRegisterProfile || "none",
       adminEmail: "", // Not used in edit mode
       adminPassword: "" // Not used in edit mode
     })
@@ -323,6 +356,41 @@ export default function TenantsPage() {
                       />
                     </div>
                   </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-[14px] font-semibold text-foreground">
+                      Primary Device Type
+                    </Label>
+                    <Select value={formData.primaryDeviceType} onValueChange={(val: any) => setFormData({...formData, primaryDeviceType: val})}>
+                      <SelectTrigger className="w-full h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                        <SelectValue placeholder="Select Device Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mikrotik">MikroTik</SelectItem>
+                        <SelectItem value="fortigate">FortiGate</SelectItem>
+                        <SelectItem value="standard">Standard VLAN</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {editingTenantId && (
+                    <div className="space-y-1.5">
+                      <Label className="text-[14px] font-semibold text-foreground">
+                        Default Register Profile
+                      </Label>
+                      <Select value={formData.defaultRegisterProfile} onValueChange={(val) => setFormData({...formData, defaultRegisterProfile: val})}>
+                        <SelectTrigger className="w-full h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                          <SelectValue placeholder="Select Profile" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">-- Select Profile --</SelectItem>
+                          {profiles.filter(p => p.tenantId === editingTenantId).map(p => (
+                            <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
                 {editingTenantId && (
                   <div className="space-y-1.5 mt-2">

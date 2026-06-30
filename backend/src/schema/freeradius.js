@@ -56,9 +56,9 @@ export const radgroupreply = pgTable("radgroupreply", {
 // radacct
 export const radacct = pgTable("radacct", {
     radacctid: bigserial("radacctid", { mode: "number" }).primaryKey(),
-    tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
+    tenantId: uuid("tenant_id").references(() => tenants.id),
     acctsessionid: varchar("acctsessionid", { length: 64 }).notNull(),
-    acctuniqueid: varchar("acctuniqueid", { length: 32 }).notNull(),
+    acctuniqueid: varchar("acctuniqueid", { length: 32 }).notNull().unique(),
     username: varchar("username", { length: 64 }).notNull(),
     realm: varchar("realm", { length: 64 }),
     nasipaddress: varchar("nasipaddress", { length: 15 }).notNull(),
@@ -80,14 +80,28 @@ export const radacct = pgTable("radacct", {
     servicetype: varchar("servicetype", { length: 32 }),
     framedprotocol: varchar("framedprotocol", { length: 32 }),
     framedipaddress: varchar("framedipaddress", { length: 15 }),
+    framedipv6address: varchar("framedipv6address", { length: 45 }),
+    framedipv6prefix: varchar("framedipv6prefix", { length: 45 }),
+    framedinterfaceid: varchar("framedinterfaceid", { length: 44 }),
+    delegatedipv6prefix: varchar("delegatedipv6prefix", { length: 45 }),
 });
 // radpostauth
 export const radpostauth = pgTable("radpostauth", {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
+    tenantId: uuid("tenant_id").references(() => tenants.id),
     username: varchar("username", { length: 64 }).notNull(),
     pass: varchar("pass", { length: 64 }),
     reply: varchar("reply", { length: 32 }),
     authdate: timestamp("authdate").notNull().defaultNow(),
+});
+// radius_dictionary (Custom attributes for UI dropdowns)
+export const radiusDictionary = pgTable("radius_dictionary", {
+    id: serial("id").primaryKey(),
+    tenantId: uuid("tenant_id").references(() => tenants.id), // null = Global (Super Admin default)
+    vendor: varchar("vendor", { length: 64 }).notNull(), // e.g. "MikroTik", "Cisco", "Generic"
+    attribute: varchar("attribute", { length: 64 }).notNull(),
+    recommendedOp: varchar("recommended_op", { length: 2 }).notNull().default("="),
+    recommendedType: varchar("recommended_type", { length: 10 }).notNull().default("reply"), // "check" or "reply"
+    description: varchar("description", { length: 255 }),
 });
 //# sourceMappingURL=freeradius.js.map

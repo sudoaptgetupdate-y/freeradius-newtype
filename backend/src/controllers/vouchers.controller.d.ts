@@ -9,6 +9,8 @@ export declare const generateVouchersSchema: z.ZodObject<{
         code: "code";
         user_pass: "user_pass";
     }>>>;
+    codeLength: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
+    passwordLength: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
 }, z.core.$strip>;
 export declare const generateVouchers: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 export declare const getJobStatus: (request: FastifyRequest<{

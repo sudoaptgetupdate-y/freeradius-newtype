@@ -101,3 +101,14 @@ export const radpostauth = pgTable("radpostauth", {
   reply: varchar("reply", { length: 32 }),
   authdate: timestamp("authdate").notNull().defaultNow(),
 });
+
+// radius_dictionary (Custom attributes for UI dropdowns)
+export const radiusDictionary = pgTable("radius_dictionary", {
+  id: serial("id").primaryKey(),
+  tenantId: uuid("tenant_id").references(() => tenants.id), // null = Global (Super Admin default)
+  vendor: varchar("vendor", { length: 64 }).notNull(), // e.g. "MikroTik", "Cisco", "Generic"
+  attribute: varchar("attribute", { length: 64 }).notNull(),
+  recommendedOp: varchar("recommended_op", { length: 2 }).notNull().default("="),
+  recommendedType: varchar("recommended_type", { length: 10 }).notNull().default("reply"), // "check" or "reply"
+  description: varchar("description", { length: 255 }),
+});

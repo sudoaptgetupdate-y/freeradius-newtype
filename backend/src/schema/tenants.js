@@ -4,6 +4,8 @@ export const tenants = pgTable("tenants", {
     name: varchar("name", { length: 255 }).notNull(),
     maxUsers: integer("max_users").notNull().default(100),
     maxNas: integer("max_nas").notNull().default(1),
+    primaryDeviceType: varchar("primary_device_type", { enum: ["mikrotik", "fortigate", "standard"] }).notNull().default("mikrotik"),
+    defaultRegisterProfile: varchar("default_register_profile", { length: 255 }),
     status: varchar("status", { enum: ["active", "suspended"] }).notNull().default("active"),
     allowLogAccess: boolean("allow_log_access").notNull().default(false),
     telegramChatId: varchar("telegram_chat_id", { length: 100 }),
