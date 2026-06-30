@@ -50,7 +50,7 @@ export const socialLoginRedirect = async (
   };
   const state = Buffer.from(JSON.stringify(stateObj)).toString("base64url");
   
-  const redirectUri = `${request.protocol}://${request.hostname}/api/v1/auth/social/callback/${provider}`;
+  const redirectUri = `${request.protocol}://${request.host}/api/v1/auth/social/callback/${provider}`;
 
   let authUrl = "";
   if (provider === "google") {
@@ -86,7 +86,7 @@ export const socialLoginCallback = async (
   
   // Get config
   const config = await getOAuthConfig(tenantId, provider);
-  const redirectUri = `${request.protocol}://${request.hostname}/api/v1/auth/social/callback/${provider}`;
+  const redirectUri = `${request.protocol}://${request.host}/api/v1/auth/social/callback/${provider}`;
 
   let socialId = "";
   let email = "";
