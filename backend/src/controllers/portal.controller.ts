@@ -15,6 +15,11 @@ export const updateSettingsSchema = z.object({
   isRegisterEnabled: z.boolean(),
   isSocialLoginEnabled: z.boolean(),
   themeColor: z.string().max(10).regex(/^#[0-9a-fA-F]{3,6}$/, "Invalid HEX color"),
+  welcomeMessage: z.string().optional().or(z.literal("")),
+  leftBgColor: z.string().max(10).regex(/^#[0-9a-fA-F]{3,6}$/, "Invalid HEX color"),
+  leftTextColor: z.string().max(10).regex(/^#[0-9a-fA-F]{3,6}$/, "Invalid HEX color"),
+  leftAccentColor: z.string().max(10).regex(/^#[0-9a-fA-F]{3,6}$/, "Invalid HEX color"),
+  tenantId: z.string().optional(),
 });
 
 export const registerUserSchema = z.object({
@@ -61,7 +66,11 @@ export const getPortalSettings = async (
     footerNote: settings?.footerNote || "",
     isRegisterEnabled: settings?.isRegisterEnabled ?? true,
     isSocialLoginEnabled: settings?.isSocialLoginEnabled ?? true,
-    themeColor: settings?.themeColor || "#3b82f6",
+    themeColor: settings?.themeColor || "#0A2540",
+    welcomeMessage: settings?.welcomeMessage || "",
+    leftBgColor: settings?.leftBgColor || "#071D33",
+    leftTextColor: settings?.leftTextColor || "#FFFFFF",
+    leftAccentColor: settings?.leftAccentColor || "#F59E0B",
   };
 
   return reply.send(responsePayload);
@@ -72,8 +81,12 @@ export const getPortalSettings = async (
  */
 export const updatePortalSettings = async (request: FastifyRequest, reply: FastifyReply) => {
   const user = request.user as any;
-  const tenantId = user.tenantId; // from JWT token
   const body = request.body as z.infer<typeof updateSettingsSchema>;
+  const tenantId = user.tenantId || body.tenantId || null;
+
+  if (!tenantId) {
+    return reply.code(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
+  }
 
   const existing = await db.query.tenantPortalSettings.findFirst({
     where: eq(tenantPortalSettings.tenantId, tenantId),

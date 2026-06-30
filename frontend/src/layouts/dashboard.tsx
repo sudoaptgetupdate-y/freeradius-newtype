@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useAuth } from "@/contexts/auth-context"
+import { ImpersonationBanner } from "@/components/impersonation-banner"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -14,7 +15,7 @@ export function DashboardLayout() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, isImpersonating } = useAuth()
 
   const handleLogout = () => {
     logout()
@@ -51,7 +52,7 @@ export function DashboardLayout() {
         
         
         <div className="text-[11px] font-bold text-sidebar-foreground/40 uppercase tracking-widest mb-3 px-2 mt-6">Management</div>
-        {user?.role === "super_admin" && (
+        {user?.role === "super_admin" && !isImpersonating && (
           <NavItem to="/tenants" icon={Building2} label={t('nav.tenants')} />
         )}
         <NavItem to="/admins" icon={UserCog} label={t('nav.admins')} />
@@ -63,7 +64,7 @@ export function DashboardLayout() {
         <NavItem to="/users" icon={Users} label={t('nav.users')} />
         <NavItem to="/portal-settings" icon={Palette} label="Portal Settings" />
         
-        {user?.role === "super_admin" && (
+        {user?.role === "super_admin" && !isImpersonating && (
           <div className="mt-4 pt-4 border-t border-sidebar-border/50">
             <div className="text-[11px] font-bold text-sidebar-foreground/40 uppercase tracking-widest mb-3 px-2">System</div>
             <NavItem to="/settings" icon={Settings} label="Global Settings" />
@@ -111,68 +112,73 @@ export function DashboardLayout() {
   )
 
   return (
-    <div className="h-screen overflow-hidden bg-muted/40 flex w-full font-sans">
-      {/* Desktop Sidebar */}
-      <aside className="w-[270px] bg-sidebar hidden lg:flex flex-col z-10 transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.02)]">
-        <SidebarNav />
-      </aside>
+    <div className="h-screen overflow-hidden bg-muted/40 flex flex-col w-full font-sans">
+      {/* Impersonation Banner — full width, above everything */}
+      <ImpersonationBanner />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        {/* Header */}
-        <header className="h-[76px] bg-background flex items-center justify-between px-4 lg:px-8 z-20 sticky top-0 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-          <div className="flex items-center flex-1">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden mr-2 text-muted-foreground hover:bg-accent/50 rounded-full h-10 w-10">
-                  <Menu className="h-[22px] w-[22px]" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[270px] p-0 flex flex-col border-r-0">
-                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                <SheetDescription className="sr-only">Sidebar navigation for mobile</SheetDescription>
-                <SidebarNav />
-              </SheetContent>
-            </Sheet>
-            
-            {/* Search Bar */}
-            <div className="hidden md:flex items-center max-w-md w-full relative">
-              <Search className="h-[18px] w-[18px] absolute left-4 text-muted-foreground/70" />
-              <Input 
-                type="search" 
-                placeholder="Search..." 
-                className="pl-11 bg-accent/30 border-transparent focus-visible:bg-background focus-visible:border-primary/30 focus-visible:ring-4 focus-visible:ring-primary/10 transition-all h-[42px] shadow-none w-64 lg:w-[400px] rounded-full text-[15px]"
-              />
+      <div className="flex flex-1 min-h-0">
+        {/* Desktop Sidebar */}
+        <aside className="w-[270px] bg-sidebar hidden lg:flex flex-col z-10 transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.02)]">
+          <SidebarNav />
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+          {/* Header */}
+          <header className="h-[76px] bg-background flex items-center justify-between px-4 lg:px-8 z-20 sticky top-0 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center flex-1">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="lg:hidden mr-2 text-muted-foreground hover:bg-accent/50 rounded-full h-10 w-10">
+                    <Menu className="h-[22px] w-[22px]" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[270px] p-0 flex flex-col border-r-0">
+                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                  <SheetDescription className="sr-only">Sidebar navigation for mobile</SheetDescription>
+                  <SidebarNav />
+                </SheetContent>
+              </Sheet>
+              
+              {/* Search Bar */}
+              <div className="hidden md:flex items-center max-w-md w-full relative">
+                <Search className="h-[18px] w-[18px] absolute left-4 text-muted-foreground/70" />
+                <Input 
+                  type="search" 
+                  placeholder="Search..." 
+                  className="pl-11 bg-accent/30 border-transparent focus-visible:bg-background focus-visible:border-primary/30 focus-visible:ring-4 focus-visible:ring-primary/10 transition-all h-[42px] shadow-none w-64 lg:w-[400px] rounded-full text-[15px]"
+                />
+              </div>
+              
+              <h1 className="font-bold text-[20px] lg:hidden tracking-tight">{t('dashboard.title')}</h1>
             </div>
-            
-            <h1 className="font-bold text-[20px] lg:hidden tracking-tight">{t('dashboard.title')}</h1>
-          </div>
-          <div className="flex items-center gap-3 md:gap-4">
-            <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-accent/30 text-muted-foreground hover:text-primary hover:bg-accent transition-colors relative">
-              <Bell className="h-[20px] w-[20px]" />
-              <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-error ring-2 ring-background"></span>
-            </Button>
-            <div className="h-6 w-px bg-border mx-1 hidden sm:block"></div>
-            <LanguageToggle />
-            <ThemeToggle />
-          </div>
-        </header>
+            <div className="flex items-center gap-3 md:gap-4">
+              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-accent/30 text-muted-foreground hover:text-primary hover:bg-accent transition-colors relative">
+                <Bell className="h-[20px] w-[20px]" />
+                <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-error ring-2 ring-background"></span>
+              </Button>
+              <div className="h-6 w-px bg-border mx-1 hidden sm:block"></div>
+              <LanguageToggle />
+              <ThemeToggle />
+            </div>
+          </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto relative bg-background/50">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              className="h-full flex flex-col"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
+          {/* Page Content */}
+          <main className="flex-1 p-6 lg:p-8 overflow-y-auto relative bg-background/50">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className="h-full flex flex-col"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
     </div>
   )

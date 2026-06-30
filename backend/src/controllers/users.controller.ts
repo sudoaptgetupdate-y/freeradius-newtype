@@ -19,36 +19,26 @@ const userUpdateSchema = z.object({
 export const getUsers = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const user = request.user as any;
+    // Use tenantId from JWT directly. This handles all cases:
+    // - Tenant Admin: tenantId = their own UUID
+    // - Super Admin (impersonating): tenantId = target tenant UUID
+    // - Super Admin (normal): tenantId = null → show all
+    const effectiveTenantId: string | null = user.tenantId ?? null;
 
-    // Get unique usernames from radcheck (filtering by password attribute to avoid duplicates if possible)
-    let usersQuery = db
+    const baseCondition = eq(radcheck.attribute, 'Cleartext-Password');
+    const whereCondition = effectiveTenantId
+      ? and(baseCondition, eq(radcheck.tenantId, effectiveTenantId))
+      : baseCondition;
+
+    const radcheckUsers = await db
       .select({
         id: radcheck.id,
         username: radcheck.username,
         tenantId: radcheck.tenantId,
       })
       .from(radcheck)
-      .where(eq(radcheck.attribute, 'Cleartext-Password'))
-      .limit(50); // Hardcoded limit for now to prevent massive scans
-
-    if (user.role !== 'super_admin') {
-      usersQuery = db
-        .select({
-          id: radcheck.id,
-          username: radcheck.username,
-          tenantId: radcheck.tenantId,
-        })
-        .from(radcheck)
-        .where(
-          and(
-            eq(radcheck.attribute, 'Cleartext-Password'),
-            eq(radcheck.tenantId, user.tenantId)
-          )
-        )
-        .limit(50);
-    }
-
-    const radcheckUsers = await usersQuery;
+      .where(whereCondition)
+      .limit(50);
 
     const userList = await Promise.all(
       radcheckUsers.map(async (u) => {
@@ -130,11 +120,12 @@ export const createUser = async (request: FastifyRequest, reply: FastifyReply) =
   try {
     const user = request.user as any;
     const data = userSchema.parse(request.body);
-
-    const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? data.tenantId : user.tenantId;
+    // tenantId comes exclusively from JWT — this enforces tenant scope for both
+    // regular Tenant Admins and impersonating Super Admins
+    const targetTenantId: string | null = user.tenantId ?? null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must impersonate a tenant first." });
     }
 
     // Check duplicate
@@ -178,12 +169,10 @@ export const updateUser = async (request: FastifyRequest, reply: FastifyReply) =
     const user = request.user as any;
     const { username } = request.params as { username: string };
     const data = userUpdateSchema.parse(request.body);
-    const query = request.query as { tenantId?: string };
-    
-    const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? query.tenantId : user.tenantId;
+    const targetTenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
 
     if (data.password) {
@@ -209,12 +198,10 @@ export const deleteUser = async (request: FastifyRequest, reply: FastifyReply) =
   try {
     const user = request.user as any;
     const { username } = request.params as { username: string };
-    const query = request.query as { tenantId?: string };
-    
-    const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? query.tenantId : user.tenantId;
+    const targetTenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
 
     await db.delete(radcheck).where(
@@ -235,12 +222,10 @@ export const getUserDetails = async (request: FastifyRequest, reply: FastifyRepl
   try {
     const authUser = request.user as any;
     const { username } = request.params as { username: string };
-    const query = request.query as { tenantId?: string };
-
-    const targetTenantId = (authUser.role === "super_admin" || authUser.role === "admin") ? query.tenantId : authUser.tenantId;
+    const targetTenantId: string | null = authUser.tenantId || (request.query as any).tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
 
     // Verify user exists in radcheck

@@ -122,3 +122,56 @@ erDiagram
 *   เมื่อผู้เช่าเข้าสู่ระบบ ข้อมูล `primaryDeviceType` และ `defaultRegisterProfile` จะถูกแพ็คใส่เข้าไปใน JWT Payload ด้วย
 *   เมื่อ Tenant Admin เปิดหน้าจอจัดการโปรไฟล์อินเทอร์เน็ต (Profiles) ตัวช่วยสร้าง (Wizard "Add Package") จะเปิดแท็บเทมเพลตที่ตรงกับอุปกรณ์หลักของ Tenant (MikroTik หรือ FortiGate) ให้ทันทีแบบ Auto-focus
 *   ระบบในหน้า Profiles จะนำค่า `defaultRegisterProfile` จาก Token มาใช้เช็คเพื่อซ่อนปุ่มลบ (Disable Delete Button) ป้องกันไม่ให้ Tenant Admin เผลอกดลบแพ็กเกจตั้งต้นของระบบทิ้ง
+
+---
+
+## 5. Impersonation Mode (ระบบการสวมสิทธิ์ผู้เช่า)
+
+ระบบการสวมสิทธิ์ช่วยให้ Master (Super Admin) สามารถสลับหน้าจอไปปฏิบัติงานในบทบาทของ Tenant Admin ของแต่ละไซต์ได้ทันที โดยไม่ต้องร้องขอรหัสผ่านหรือสร้างผู้ใช้งานจำลองในไซต์ของลูกค้า ซึ่งช่วยลดความซับซ้อนของการเขียน UI ในหน้ารายการข้อมูลย่อยต่าง ๆ
+
+### 5.1 กลไกการทำงาน (Technical Flow)
+1. **การเรียกสิทธิ์ (Triggering)**:
+   - ในหน้า **Tenant Management** (ที่เข้าถึงได้เฉพาะ Master Admin เท่านั้น) จะมีปุ่ม 🔑 **"Manage"** (สัญลักษณ์ LogIn) ท้ายรายชื่อของแต่ละ Tenant
+   - เมื่อ Master กดสวมสิทธิ์ Client จะส่ง Request ไปยัง API Endpoint `/auth/impersonate` พร้อมระบุ `tenantId` ปลายทาง
+2. **การทำงานของ JWT Context**:
+   - Backend จะประมวลผลออก JWT Token ชุดใหม่ที่มี Payload ระบุฟิลด์จำลองสิทธิ์โดยสวมค่า `tenantId` ไปที่ระดับ Token Payload:
+     ```json
+     {
+       "id": "master_admin_id",
+       "email": "master_email",
+       "role": "super_admin",
+       "tenantId": "target_tenant_id",
+       "isImpersonating": true,
+       "originalAdminId": "master_admin_id",
+       "primaryDeviceType": "tenant_device_type",
+       "defaultRegisterProfile": "tenant_profile"
+     }
+     ```
+   - ในฝั่ง Backend Service: คอนโทรลเลอร์ทั้งหมด (เช่น Users, NAS, Profiles, Vouchers) จะทำงานโดยใช้ `user.tenantId` จาก Token JWT ในการสืบค้นข้อมูลฐานข้อมูลโดยตรง ทำให้การแยกแยะสิทธิ์ข้อมูลระดับผู้เช่า (Tenant Isolation) ทำงานได้อย่างสมบูรณ์และเป็นเนื้อเดียวกันกับผู้ใช้งานระดับผู้เช่าทั่วไปโดยไม่ต้องแก้ไข SQL หรือเขียน logic คลุมแยกต่างหาก
+3. **User Experience (UI/UX)**:
+   - เมื่ออยู่ในโหมดสวมสิทธิ์ Frontend Dashboard จะแสดงแบนเนอร์จำลองสถานะสีส้มขนาดใหญ่ด้านบนสุดของเว็บเพจ (`ImpersonationBanner`) ระบุข้อมูล: *"Impersonation Mode — Managing: [ชื่อ Tenant]"* เพื่อเตือนผู้ใช้งานเสมอ
+   - เมนูด้านข้าง (Sidebar) จะถูกจำกัดตามสิทธิ์ของ Tenant ปลายทาง 100% (ซ่อนเมนูระบบและรายชื่อ Tenant อื่น)
+   - มีปุ่ม **"Exit"** ที่แบนเนอร์นี้เสมอ เมื่อกดแล้วจะส่งคำร้องไปยัง API `/auth/exit-impersonate` เพื่อรับ Token และ User ชุดเดิมของ Master Admin กลับไปเก็บในเบราว์เซอร์ พร้อมดึงหน้าจอกลับมาสู่หน้าจัดการทั่วไปทันที
+
+---
+
+## 6. แนวทางความจำเป็นของ Tenant Filter และ Global Search ควบคู่กับ Impersonation Mode
+
+การทำ Impersonation Mode ช่วยตัดความต้องการในการเขียนหน้าจอที่มี Dynamic Tenant Filter ในเกือบทุกหน้า (เช่น หน้า Users, Vouchers, Profiles, NAS) ทิ้งไปได้ อย่างไรก็ตาม ระบบส่วนกลางของ Master Admin ยังจำเป็นต้องมีจุดค้นหาข้ามสาขาเฉพาะกรณี (Use Cases) ดังต่อไปนี้:
+
+### 6.1 จุดที่ต้องการ Global Search (การค้นหาข้ามทุก Tenant)
+1. **หน้าจอค้นหาผู้ใช้อินเทอร์เน็ตส่วนกลาง (Global User Search)**
+   - **กรณีใช้งาน**: เมื่ออุปกรณ์ปลายทางเจอปัญหาไม่สามารถล็อกอินได้ แต่ไม่รู้ว่าผู้ใช้ดังกล่าวสังกัดอยู่กับ Tenant ไซต์ใด (เช่น ลูกค้าแจ้งเพียง Username หรือ MAC Address ผ่านทางฝ่ายบริการหลังบ้านหลัก)
+   - **ความสามารถ**: ให้ Master Admin พิมพ์ Username, อีเมล หรือ MAC Address ค้นหาจากฐานข้อมูลรวม เมื่อพบข้อมูลแล้ว จะแสดงชื่อ Tenant ของผู้ใช้นั้น ๆ พร้อมปุ่มให้ Master กด Impersonate สลับสิทธิ์เข้าไปตรวจสอบประวัติการต่อเน็ต (radacct/Loki) ของผู้ใช้รายนั้นทันที
+2. **หน้าจอรวบรวมอุปกรณ์เครือข่ายทั้งหมด (Global NAS/Router Monitoring)**
+   - **กรณีใช้งาน**: Master Admin ต้องการตรวจสอบสถานะความเคลื่อนไหวทางเทคนิค เช่น ดูว่ามี NAS Router ตัวใดของลูกค้าออฟไลน์ไปบ้างในขณะนี้
+   - **ความสามารถ**: แสดงรายชื่อ NAS ทั่วทั้งระบบพร้อมสถานะ (Online/Offline) และแสดงชื่อของ Tenant ที่เป็นเจ้าของ ทำให้ทีม Network Engineer ของระบบ SaaS ทราบสถานการณ์ภาพรวมได้ทันที
+
+### 6.2 จุดที่ต้องการ Tenant Filter (การเลือกกรองรายไซต์โดยตรง)
+1. **หน้าจอวิเคราะห์สถิติและการเรียกเก็บเงิน (Global Analytics & Billing Dashboard)**
+   - **กรณีใช้งาน**: การเปรียบเทียบปริมาณการใช้งานทราฟฟิก (Bandwidth) และสถิติเชิงปริมาณของแต่ละ Tenant (เช่น จำนวน Account ที่แอคทีฟ, โควต้าผู้ใช้ที่เหลืออยู่)
+   - **ความสามารถ**: หน้า Dashboard ของ Master ต้องมี Tenant Filter เพื่อเลือกว่าจะเปรียบเทียบผู้เช่ารายใดบ้าง หรือเลือกกรองภาพรวม (All Tenants) เพื่อดูแนวโน้มการขยายตัวของระบบในภาพกว้าง
+2. **ระบบรวบรวม Log พ.ร.บ. ส่วนกลาง (Centralized Log Explorer)**
+   - **กรณีใช้งาน**: การสืบค้น Log การใช้งานอินเทอร์เน็ตตามคำสั่งของเจ้าหน้าที่รัฐ (Law Enforcement)
+   - **ความสามารถ**: แผงควบคุมสืบค้น LogQL (Loki) ของ Master Admin จะต้องมี Dropdown Filter เลือก Tenant เพื่อเจาะจงค้นหา Log ของผู้เช่านั้น ๆ ร่วมกับการระบุ IP, MAC หรือช่วงเวลาได้อย่างแม่นยำและรวดเร็ว
+

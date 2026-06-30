@@ -30,16 +30,17 @@ const updateProfileSchema = profileSchema.extend({
 export const getProfiles = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const user = request.user as any;
-    
-    // Fetch all attributes for this tenant
+    const effectiveTenantId: string | null = user.tenantId ?? null;
+
     let replyAttrs, checkAttrs;
-    if (user.role === "super_admin" || user.role === "admin") {
+    if (effectiveTenantId) {
+      replyAttrs = await db.select().from(radgroupreply).where(eq(radgroupreply.tenantId, effectiveTenantId));
+      checkAttrs = await db.select().from(radgroupcheck).where(eq(radgroupcheck.tenantId, effectiveTenantId));
+    } else {
       replyAttrs = await db.select().from(radgroupreply);
       checkAttrs = await db.select().from(radgroupcheck);
-    } else {
-      replyAttrs = await db.select().from(radgroupreply).where(eq(radgroupreply.tenantId, user.tenantId));
-      checkAttrs = await db.select().from(radgroupcheck).where(eq(radgroupcheck.tenantId, user.tenantId));
     }
+
 
     // Group by groupname
     const profilesMap = new Map<string, any>();
@@ -106,11 +107,10 @@ export const createProfile = async (request: FastifyRequest, reply: FastifyReply
   try {
     const user = request.user as any;
     const data = profileSchema.parse(request.body);
-
-    const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? data.tenantId : user.tenantId;
+    const targetTenantId: string | null = user.tenantId || (request.body as any).tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
 
     // Check if profile exists
@@ -206,11 +206,10 @@ export const updateProfile = async (request: FastifyRequest, reply: FastifyReply
   try {
     const user = request.user as any;
     const data = updateProfileSchema.parse(request.body);
-
-    const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? data.tenantId : user.tenantId;
+    const targetTenantId: string | null = user.tenantId || (request.body as any).tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
 
     // Ensure the old profile exists
@@ -339,11 +338,10 @@ export const deleteProfile = async (request: FastifyRequest, reply: FastifyReply
     if (!query.name) {
       return reply.status(400).send({ error: "Profile name is required in query" });
     }
-    
-    const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? query.tenantId : user.tenantId;
+    const targetTenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant ID is required to delete a profile" });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
 
     // Check if profile is being used by any users

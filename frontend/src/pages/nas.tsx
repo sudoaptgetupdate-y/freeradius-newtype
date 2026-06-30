@@ -44,11 +44,12 @@ type NasData = {
 
 export default function NasPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, isImpersonating } = useAuth()
   const MySwal = withReactContent(Swal)
   const [nasList, setNasList] = useState<NasData[]>([])
   const [tenants, setTenants] = useState<{id: string, name: string}[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedTenantFilter, setSelectedTenantFilter] = useState<string>("all")
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -173,10 +174,12 @@ export default function NasPage() {
     }
   }
 
-  const filteredNas = nasList.filter(nas => 
-    nas.nasname.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    nas.shortname.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredNas = nasList.filter(nas => {
+    const matchesSearch = nas.nasname.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          nas.shortname.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTenant = selectedTenantFilter === "all" || nas.tenantId === selectedTenantFilter;
+    return matchesSearch && matchesTenant;
+  })
 
   const {
     currentPage,
@@ -232,16 +235,74 @@ export default function NasPage() {
         </Button>
       </div>
 
+      {isImpersonating && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 font-semibold">
+              <Server className="h-5 w-5 animate-pulse animate-duration-1000" />
+              <span>Service Mode Tools (Mockup)</span>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              เครื่องมือช่างสำหรับแอดมินระดับสูงเพื่อวิเคราะห์และซ่อมแซมระบบเครือข่ายของไซต์นี้ (แสดงเฉพาะคุณขณะสวมสิทธิ์)
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-background border-amber-500/20 text-amber-600 dark:text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 h-9 px-3 rounded-lg text-xs font-medium"
+              onClick={() => toast.info("Mockup: กำลังส่งคำสั่งทดสอบเชื่อมต่อตรง (CoA Port Test)...")}
+            >
+              Test CoA Port
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-background border-amber-500/20 text-amber-600 dark:text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 h-9 px-3 rounded-lg text-xs font-medium"
+              onClick={() => toast.info("Mockup: บังคับซิงค์โครงสร้าง RADIUS สำเร็จ")}
+            >
+              Force Sync Config
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-background border-amber-500/20 text-amber-600 dark:text-amber-500 hover:bg-amber-500/10 hover:text-amber-600 h-9 px-3 rounded-lg text-xs font-medium"
+              onClick={() => toast.info("Mockup: อนุมัติข้ามขีดจำกัดอุปกรณ์ (Quota Bypass) ชั่วคราวสำเร็จ")}
+            >
+              Bypass Limit
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Card>
+
         <CardHeader className="pb-3 px-4 sm:px-6">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder={t('nas.search')}
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder={t('nas.search')}
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            {user?.role === "super_admin" && !isImpersonating && (
+              <div className="w-full sm:w-64 flex items-center gap-2">
+                <Select value={selectedTenantFilter} onValueChange={setSelectedTenantFilter}>
+                  <SelectTrigger className="w-full bg-background border-border">
+                    <SelectValue placeholder="All Tenants" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tenants</SelectItem>
+                    {tenants.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
@@ -250,6 +311,9 @@ export default function NasPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">{t('nas.colName')}</TableHead>
+                  {user?.role === "super_admin" && !isImpersonating && (
+                    <TableHead>Tenant / Site</TableHead>
+                  )}
                   <TableHead>{t('nas.colIp')}</TableHead>
                   <TableHead>{t('nas.colType')}</TableHead>
                   <TableHead>{t('nas.colSecret')}</TableHead>
@@ -259,7 +323,7 @@ export default function NasPage() {
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={user?.role === "super_admin" && !isImpersonating ? 6 : 5} className="h-24 text-center text-muted-foreground">
                       No router/NAS devices found.
                     </TableCell>
                   </TableRow>
@@ -272,6 +336,13 @@ export default function NasPage() {
                           {nas.shortname}
                         </div>
                       </TableCell>
+                      {user?.role === "super_admin" && !isImpersonating && (
+                        <TableCell>
+                          <Badge variant="secondary" className="font-normal">
+                            {tenants.find(t => t.id === nas.tenantId)?.name || 'Unknown'}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span className="font-mono">{nas.nasname}</span>
                       </TableCell>

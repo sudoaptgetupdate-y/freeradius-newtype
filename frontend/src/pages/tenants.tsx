@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
-import { Search, Plus, Edit, Building2, Loader2, Mail, Key, Users, Power, PowerOff, Server } from "lucide-react"
+import { Search, Plus, Edit, Building2, Loader2, Mail, Key, Users, Power, PowerOff, Server, LogIn } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
+import { useNavigate } from "react-router-dom"
 import Swal from "sweetalert2"
 import withReactContent from "sweetalert2-react-content"
 import { Button } from "@/components/ui/button"
@@ -35,6 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import api from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 
 type TenantData = {
   id: string
@@ -49,6 +51,8 @@ type TenantData = {
 
 export default function TenantsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { startImpersonation } = useAuth()
   const MySwal = withReactContent(Swal)
   const [tenants, setTenants] = useState<TenantData[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -179,6 +183,21 @@ export default function TenantsPage() {
     }
   }
 
+  const handleImpersonate = async (tenant: TenantData) => {
+    if (tenant.status === "suspended") {
+      toast.error("Cannot impersonate a suspended tenant")
+      return
+    }
+    try {
+      const res = await api.post("/auth/impersonate", { tenantId: tenant.id })
+      startImpersonation(res.data.token, res.data.user, res.data.tenantName)
+      toast.success(`Now managing: ${tenant.name}`)
+      navigate("/")
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to impersonate tenant")
+    }
+  }
+
   const filteredTenants = tenants.filter(tenant => 
     tenant.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -262,6 +281,15 @@ export default function TenantsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary"
+                          onClick={() => handleImpersonate(tenant)}
+                          title={`Manage ${tenant.name}`}
+                        >
+                          <LogIn className="h-4 w-4" />
+                        </Button>
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(tenant)}>
                           <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>

@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "react-toastify"
-import { Loader2, LogIn, UserPlus } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import api from "@/lib/api"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
+import { PortalLayout } from "@/layouts/portal-layout"
 
 export default function PortalLoginPage() {
   const { tenantId } = useParams()
@@ -243,115 +244,86 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30" style={{ '--primary': settings.themeColor } as any}>
-      <div className="absolute top-4 right-4 flex gap-2 z-10">
-        <ThemeToggle />
-        <LanguageToggle />
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center p-4 py-12">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt="Logo" className="h-16 mx-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-            ) : (
-              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
-                <LogIn className="h-8 w-8" />
-              </div>
-            )}
-            <h1 className="text-2xl font-bold tracking-tight">{settings.orgName}</h1>
-            <p className="text-sm text-muted-foreground">Sign in to connect to the internet</p>
-          </div>
-
-          <Card className="border-t-4 shadow-xl" style={{ borderTopColor: settings.themeColor }}>
-            <form onSubmit={handleLoginSubmit}>
-              <CardContent className="space-y-4 pt-6">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input 
-                    id="username" 
-                    placeholder="Enter your username"
-                    required 
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input 
-                    id="password" 
-                    type="password"
-                    placeholder="Enter your password"
-                    required 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4">
-                <Button 
-                  type="submit" 
-                  className="w-full text-white" 
-                  style={{ backgroundColor: settings.themeColor }}
-                  disabled={loggingIn}
-                >
-                  {loggingIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
-                  Connect
-                </Button>
-
-                {settings.isRegisterEnabled && (
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(getRegisterLink())}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Register New Account
-                  </Button>
-                )}
-
-                {settings.isSocialLoginEnabled && (
-                  <div className="space-y-3 w-full pt-2 border-t border-border">
-                    <p className="text-xs text-center text-muted-foreground uppercase tracking-widest">Or login with</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="bg-white hover:bg-red-50 hover:text-red-600 text-black border-red-200"
-                        onClick={() => handleSocialLogin("google")}
-                      >
-                        <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
-                          <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.51 0-6.355-2.845-6.355-6.355s2.845-6.355 6.355-6.355c1.62 0 3.09.61 4.22 1.62l3.05-3.05C19.34 2.25 15.99 1 12.24 1 5.48 1 0 6.48 0 13.24s5.48 12.24 12.24 12.24c6.88 0 11.76-4.83 11.76-11.96 0-.49-.04-.97-.12-1.44H12.24z"/>
-                        </svg>
-                        Google
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="bg-[#06C755] hover:bg-[#05b04b] text-white hover:text-white border-none"
-                        onClick={() => handleSocialLogin("line")}
-                      >
-                        <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M24 10.3c0-5.7-5.4-10.3-12-10.3s-12 4.6-12 10.3c0 5.1 4.3 9.3 10.1 10.1.4.1.9.3 1 .7.1.3.1.8 0 1.1s-.4 1.8-.5 2.1c0 .2-.1.4.1.6.1.1.3.2.5.2.2 0 1.2-.6 2.3-1.4 1-.7 2.1-1.6 2.8-2.2 4.8-1.5 8.2-5.7 8.2-11.2z"/>
-                        </svg>
-                        LINE
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                
-                {settings.footerNote && (
-                  <p className="text-xs text-center text-muted-foreground w-full">
-                    {settings.footerNote}
-                  </p>
-                )}
-              </CardFooter>
-            </form>
-          </Card>
+    <PortalLayout 
+      activeTab="login" 
+      onTabChange={(tab) => {
+        if (tab === "register") navigate(getRegisterLink())
+      }} 
+      settings={settings}
+    >
+      <form onSubmit={handleLoginSubmit} className="flex-1 flex flex-col">
+        
+        <div className="mb-[18px]">
+          <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">ชื่อผู้ใช้</label>
+          <input 
+            type="text" 
+            placeholder="กรอกชื่อผู้ใช้"
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+          />
         </div>
-      </div>
-    </div>
+        
+        <div className="mb-2">
+          <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">รหัสผ่าน</label>
+          <input 
+            type="password" 
+            placeholder="กรอกรหัสผ่าน"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+          />
+        </div>
+        
+        <div className="text-right mb-5">
+          <a className="text-[12.5px] text-[#5B6172] cursor-pointer hover:text-[#0B1F3A]">ลืมรหัสผ่าน?</a>
+        </div>
+        
+        <button 
+          type="submit" 
+          disabled={loggingIn}
+          className="w-full h-[46px] border-none rounded-[9px] text-white text-[14.5px] font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors bg-[#0B1F3A] hover:bg-[#16315C] disabled:opacity-70"
+          style={settings?.themeColor ? { backgroundColor: settings.themeColor } : {}}
+        >
+          {loggingIn && <Loader2 className="h-4 w-4 animate-spin" />}
+          เชื่อมต่ออินเทอร์เน็ต
+        </button>
+
+        {settings.isSocialLoginEnabled && (
+          <>
+            <div className="flex items-center gap-3 my-[22px] text-[#9498A4] text-[12px] before:content-[''] before:flex-1 before:h-[1px] before:bg-[#E7E5DE] after:content-[''] after:flex-1 after:h-[1px] after:bg-[#E7E5DE]">
+              หรือเข้าสู่ระบบด้วย
+            </div>
+            
+            <div className="flex gap-2.5 mb-2">
+              <button 
+                type="button"
+                onClick={() => handleSocialLogin("google")}
+                className="flex-1 h-[42px] rounded-[9px] border border-[#E7E5DE] bg-white text-[13.5px] font-medium text-[#101522] cursor-pointer flex items-center justify-center gap-2 transition-all hover:bg-[#FAF9F5] hover:border-[#9498A4]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3h3.88c2.27-2.09 3.55-5.17 3.55-8.65z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.9l-3.88-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.3c-.25-.72-.38-1.5-.38-2.3s.13-1.58.38-2.3v-3.1H1.27A11.93 11.93 0 0 0 0 12c0 1.93.46 3.76 1.27 5.4l4-3.1z"/><path fill="#EA4335" d="M12 4.74c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.6l4 3.1C6.22 6.85 8.87 4.74 12 4.74z"/></svg>
+                Google
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleSocialLogin("line")}
+                className="flex-1 h-[42px] rounded-[9px] border border-[#E7E5DE] bg-white text-[13.5px] font-medium text-[#101522] cursor-pointer flex items-center justify-center gap-2 transition-all hover:bg-[#FAF9F5] hover:border-[#9498A4]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#06C755" d="M12 0C5.37 0 0 4.48 0 10c0 4.94 4.29 9.07 10.08 9.86.39.08.92.26 1.06.6.12.31.08.79.04 1.1l-.17 1.05c-.05.31-.24 1.2 1.05.65 1.29-.54 6.96-4.1 9.5-7.03C23.16 14.07 24 12.13 24 10c0-5.52-5.37-10-12-10z"/></svg>
+                LINE
+              </button>
+            </div>
+          </>
+        )}
+
+        {settings.isRegisterEnabled && (
+          <div className="text-center text-[13px] text-[#5B6172] mt-auto pt-4">
+            ยังไม่มีบัญชี? <a onClick={() => navigate(getRegisterLink())} className="font-semibold text-[#0B1F3A] cursor-pointer hover:underline" style={settings?.themeColor ? { color: settings.themeColor } : {}}>สมัครสมาชิกใหม่</a>
+          </div>
+        )}
+      </form>
+    </PortalLayout>
   )
 }

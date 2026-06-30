@@ -89,6 +89,11 @@
     - Created **Portal Settings** management UI inside the dashboard layout enabling Tenant Admins to customize portal colors, branding assets, configure switches for registration/social logins, and copy the registration URL.
     - Built a responsive, mobile-first **Public Registration Page** carrying over query parameters for seamless authentication redirections.
     - Built a public **Portal Login Page** with dynamic styling that detects and supports multi-vendor Hotspot login submission flows (Mikrotik, Fortigate, Cisco Meraki, Aruba, and generic fallback devices) by automatically posting user credentials back to the gateway.
+19. **Portal Settings & Vouchers UI/UX Enhancements (Post-Phase 13):**
+    - Redesigned the **Portal Settings** page into a 3-step Wizard layout (Branding & Identity -> Theme Colors -> Settings & Legal).
+    - Added a persistent **"Live Preview"** slide-out Sheet (Drawer) showing real-time updates for Login/Register layouts during editing.
+    - Aligned page constraints of Portal Settings to match Global Settings (`max-w-[1200px] mx-auto`) and removed duplicate padding.
+    - Standardized **Vouchers** list layout by grouping filters and the Refresh button into a single `<CardHeader>` row, eliminating vertical whitespace.
 
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.

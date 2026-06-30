@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardTitle, CardFooter } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "react-toastify"
-import { Loader2, UserPlus, CheckCircle2, ArrowLeft } from "lucide-react"
+import { Loader2, UserPlus, CheckCircle2 } from "lucide-react"
 import api from "@/lib/api"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
+import { PortalLayout } from "@/layouts/portal-layout"
 
 export default function RegisterPage() {
   const { tenantId } = useParams()
@@ -107,185 +107,165 @@ export default function RegisterPage() {
     )
   }
 
+  const getLoginLink = () => `/portal/${tenantId}?${searchParams.toString()}`
+
   if (!settings.isRegisterEnabled) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4" style={{ '--primary': settings.themeColor } as any}>
-        <div className="absolute top-4 right-4 flex gap-2">
-          <ThemeToggle />
-          <LanguageToggle />
-        </div>
-        <Card className="max-w-md w-full text-center p-8 border-t-4" style={{ borderTopColor: settings.themeColor }}>
-          {settings.logoUrl && (
-            <img src={settings.logoUrl} alt="Logo" className="h-16 mx-auto mb-6 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-          )}
-          <CardTitle className="text-xl mb-2">Registration Disabled</CardTitle>
-          <CardDescription>
+      <PortalLayout activeTab="register" onTabChange={(tab) => { if (tab === "login") navigate(getLoginLink()) }} settings={settings}>
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+          <CardTitle className="text-xl mb-2 text-[#101522]">Registration Disabled</CardTitle>
+          <CardDescription className="text-[#5B6172]">
             Self-registration is currently disabled for {settings.orgName}. Please contact the administrator.
           </CardDescription>
-        </Card>
-      </div>
+        </div>
+      </PortalLayout>
     )
   }
 
   if (success) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4" style={{ '--primary': settings.themeColor } as any}>
-        <Card className="max-w-md w-full text-center p-8 border-t-4" style={{ borderTopColor: settings.themeColor }}>
-          <div className="text-green-500 mb-6 flex justify-center">
-            <CheckCircle2 className="h-16 w-16" />
+      <PortalLayout activeTab="register" onTabChange={(tab) => { if (tab === "login") navigate(getLoginLink()) }} settings={settings}>
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+          <div className="text-green-500 mb-6">
+            <CheckCircle2 className="h-16 w-16 mx-auto" />
           </div>
-          <CardTitle className="text-2xl mb-2">Registration Successful!</CardTitle>
-          <CardDescription className="mb-6">
+          <CardTitle className="text-2xl mb-2 text-[#101522]">Registration Successful!</CardTitle>
+          <CardDescription className="mb-8 text-[#5B6172]">
             Your account has been created. You can now log in to the Wi-Fi network using your username and password.
           </CardDescription>
-          <Button 
-            className="w-full" 
-            style={{ backgroundColor: settings.themeColor }}
-            onClick={() => navigate(`/portal/${tenantId}?${searchParams.toString()}`)}
+          <button 
+            onClick={() => navigate(getLoginLink())}
+            className="h-[46px] px-8 border-none rounded-[9px] text-white text-[14.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors bg-[#0B1F3A] hover:bg-[#16315C]"
+            style={settings?.themeColor ? { backgroundColor: settings.themeColor } : {}}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Return to Login
-          </Button>
-        </Card>
-      </div>
+            ไปที่หน้าเข้าสู่ระบบ
+          </button>
+        </div>
+      </PortalLayout>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30" style={{ '--primary': settings.themeColor } as any}>
-      <div className="absolute top-4 right-4 flex gap-2 z-10">
-        <ThemeToggle />
-        <LanguageToggle />
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center p-4 py-12">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt="Logo" className="h-16 mx-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-            ) : (
-              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
-                <UserPlus className="h-8 w-8" />
-              </div>
-            )}
-            <h1 className="text-2xl font-bold tracking-tight">{settings.orgName}</h1>
-            <p className="text-sm text-muted-foreground">Create an account to access the internet</p>
+    <PortalLayout 
+      activeTab="register" 
+      onTabChange={(tab) => {
+        if (tab === "login") navigate(getLoginLink())
+      }} 
+      settings={settings}
+    >
+      <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+        
+        <div className="grid grid-cols-2 gap-3.5 mb-[18px]">
+          <div>
+            <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">ชื่อจริง</label>
+            <input 
+              type="text" 
+              placeholder="ชื่อจริง"
+              required
+              value={formData.firstName}
+              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+              className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+            />
           </div>
-
-          <Card className="border-t-4 shadow-xl" style={{ borderTopColor: settings.themeColor }}>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4 pt-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input 
-                      id="firstName" 
-                      required 
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input 
-                      id="lastName" 
-                      required 
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input 
-                    id="phone" 
-                    type="tel" 
-                    required 
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input 
-                    id="username" 
-                    required 
-                    value={formData.username}
-                    onChange={(e) => setFormData({...formData, username: e.target.value})}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      required 
-                      value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input 
-                      id="confirmPassword" 
-                      type="password" 
-                      required 
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                {settings.termsOfService && (
-                  <div className="pt-2">
-                    <Label className="mb-2 block">Terms of Service</Label>
-                    <div className="h-32 w-full rounded-md border border-input bg-muted/50 p-3 text-sm overflow-y-auto whitespace-pre-wrap">
-                      {settings.termsOfService}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-start space-x-2 pt-2">
-                  <Checkbox 
-                    id="terms" 
-                    checked={formData.acceptedTos}
-                    onCheckedChange={(checked: any) => setFormData({...formData, acceptedTos: !!checked})}
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <label
-                      htmlFor="terms"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      I accept the terms and conditions
-                    </label>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4">
-                <Button 
-                  type="submit" 
-                  className="w-full text-white" 
-                  style={{ backgroundColor: settings.themeColor }}
-                  disabled={registering}
-                >
-                  {registering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Create Account
-                </Button>
-                
-                {settings.footerNote && (
-                  <p className="text-xs text-center text-muted-foreground w-full">
-                    {settings.footerNote}
-                  </p>
-                )}
-              </CardFooter>
-            </form>
-          </Card>
+          <div>
+            <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">นามสกุล</label>
+            <input 
+              type="text" 
+              placeholder="นามสกุล"
+              required
+              value={formData.lastName}
+              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+              className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+            />
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div className="mb-[18px]">
+          <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">เบอร์โทรศัพท์</label>
+          <input 
+            type="tel" 
+            placeholder="08X-XXX-XXXX"
+            required
+            value={formData.phone}
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+          />
+        </div>
+
+        <div className="mb-[18px]">
+          <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">ชื่อผู้ใช้</label>
+          <input 
+            type="text" 
+            placeholder="ตั้งชื่อผู้ใช้"
+            required
+            value={formData.username}
+            onChange={(e) => setFormData({...formData, username: e.target.value})}
+            className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3.5 mb-[18px]">
+          <div>
+            <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">รหัสผ่าน</label>
+            <input 
+              type="password" 
+              placeholder="รหัสผ่าน"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+            />
+          </div>
+          <div>
+            <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">ยืนยันรหัสผ่าน</label>
+            <input 
+              type="password" 
+              placeholder="ยืนยันรหัสผ่าน"
+              required
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+              className="w-full h-[42px] px-3.5 border border-[#E7E5DE] rounded-[9px] text-[14px] text-[#101522] bg-white outline-none transition-all focus:border-[#E8B339] focus:ring-[3px] focus:ring-[#FBF1DA]"
+            />
+          </div>
+        </div>
+
+        {settings.termsOfService && (
+          <div className="mb-4">
+            <label className="block text-[13px] font-semibold text-[#101522] mb-1.5">ข้อกำหนดและเงื่อนไขการใช้บริการ</label>
+            <div className="border border-[#E7E5DE] rounded-[9px] bg-[#FAF9F5] p-3 h-[90px] overflow-y-auto text-[12.5px] text-[#5B6172] leading-[1.6] whitespace-pre-wrap">
+              {settings.termsOfService}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-start gap-2 my-3.5 mb-[22px]">
+          <input 
+            type="checkbox" 
+            id="accept"
+            checked={formData.acceptedTos}
+            onChange={(e) => setFormData({...formData, acceptedTos: e.target.checked})}
+            className="w-4 h-4 mt-[2px] cursor-pointer"
+            style={{ accentColor: settings.themeColor || "#0B1F3A" }}
+          />
+          <label htmlFor="accept" className="text-[13px] font-normal text-[#5B6172] cursor-pointer m-0">
+            ฉันยอมรับข้อกำหนดและเงื่อนไขการใช้บริการ
+          </label>
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={registering}
+          className="w-full h-[46px] border-none rounded-[9px] text-white text-[14.5px] font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors bg-[#0B1F3A] hover:bg-[#16315C] disabled:opacity-70"
+          style={settings?.themeColor ? { backgroundColor: settings.themeColor } : {}}
+        >
+          {registering && <Loader2 className="h-4 w-4 animate-spin" />}
+          สร้างบัญชี
+        </button>
+
+        <div className="text-center text-[13px] text-[#5B6172] mt-auto pt-[18px]">
+          มีบัญชีอยู่แล้ว? <a onClick={() => navigate(getLoginLink())} className="font-semibold text-[#0B1F3A] cursor-pointer hover:underline" style={settings?.themeColor ? { color: settings.themeColor } : {}}>เข้าสู่ระบบ</a>
+        </div>
+      </form>
+    </PortalLayout>
   )
 }

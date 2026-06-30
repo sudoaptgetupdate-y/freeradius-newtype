@@ -14,8 +14,7 @@ import { DictionaryPage } from "@/pages/dictionary"
 import NasPage from "@/pages/nas"
 import AdminsPage from "@/pages/admins"
 import { VouchersPage } from "@/pages/vouchers"
-import RegisterPage from "@/pages/public/register"
-import PortalLoginPage from "@/pages/public/portal-login"
+import PortalPage from "@/pages/public/portal-page"
 import SettingsPage from "@/pages/settings"
 import PortalSettings from "@/pages/portal-settings"
 import "./i18n"
@@ -27,8 +26,8 @@ function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register/:tenantId" element={<RegisterPage />} />
-            <Route path="/portal/:tenantId" element={<PortalLoginPage />} />
+            <Route path="/register/:tenantId" element={<PortalPage defaultTab="register" />} />
+            <Route path="/portal/:tenantId" element={<PortalPage defaultTab="login" />} />
             
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<DashboardLayout />}>

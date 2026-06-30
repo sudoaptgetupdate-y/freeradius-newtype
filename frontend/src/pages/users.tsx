@@ -63,13 +63,14 @@ type ProfileData = {
 
 export function UsersPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, isImpersonating } = useAuth()
   const MySwal = withReactContent(Swal)
   const [users, setUsers] = useState<UserData[]>([])
   const [profiles, setProfiles] = useState<ProfileData[]>([])
   const [tenants, setTenants] = useState<{id: string, name: string}[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedTenantFilter, setSelectedTenantFilter] = useState<string>("all")
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -232,8 +233,9 @@ export function UsersPage() {
     const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           user.mac.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === "all" || (statusFilter === "online" ? user.isOnline : !user.isOnline)
+    const matchesTenant = selectedTenantFilter === "all" || user.tenantId === selectedTenantFilter;
     
-    return matchesSearch && matchesStatus
+    return matchesSearch && matchesStatus && matchesTenant;
   })
 
   const {
@@ -272,7 +274,23 @@ export function UsersPage() {
               />
             </div>
             <div className="flex items-center space-x-2 w-full sm:w-auto">
-              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              {user?.role === "super_admin" && !isImpersonating && (
+                <>
+                  <Filter className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
+                  <Select value={selectedTenantFilter} onValueChange={setSelectedTenantFilter}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="All Tenants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tenants</SelectItem>
+                      {tenants.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-[150px]">
                   <SelectValue placeholder="Filter by status" />
@@ -292,6 +310,9 @@ export function UsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('users.colUsername')}</TableHead>
+                  {user?.role === "super_admin" && !isImpersonating && (
+                    <TableHead>Tenant / Site</TableHead>
+                  )}
                   <TableHead>Profile</TableHead>
                   <TableHead className="hidden md:table-cell">{t('users.colMac')}</TableHead>
                   <TableHead className="hidden lg:table-cell">{t('users.colIp')}</TableHead>
@@ -303,36 +324,38 @@ export function UsersPage() {
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={user?.role === "super_admin" && !isImpersonating ? 8 : 7} className="h-24 text-center text-muted-foreground">
                       No users found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedData.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
+                  paginatedData.map((u) => (
+                    <TableRow key={u.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span
-                            className={`font-semibold cursor-pointer hover:underline transition-colors ${
-                              user.isOnline 
-                                ? "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300" 
-                                : "text-muted-foreground/80 hover:text-foreground"
-                            }`}
-                            onClick={() => handleOpenDetails(user.username)}
-                          >
-                            {user.username}
-                          </span>
-                          {(user as any).tenantId && (
-                            <span className="text-xs text-muted-foreground">Tenant: {(user as any).tenantId}</span>
-                          )}
-                        </div>
+                        <span
+                          className={`font-semibold cursor-pointer hover:underline transition-colors ${
+                            u.isOnline 
+                              ? "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300" 
+                              : "text-muted-foreground/80 hover:text-foreground"
+                          }`}
+                          onClick={() => handleOpenDetails(u.username)}
+                        >
+                          {u.username}
+                        </span>
                       </TableCell>
-                      <TableCell><Badge variant="outline">{user.profileName}</Badge></TableCell>
-                      <TableCell className={`font-mono text-xs hidden md:table-cell ${user.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{user.mac}</TableCell>
-                      <TableCell className={`font-mono text-xs hidden lg:table-cell ${user.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{user.ip}</TableCell>
-                      <TableCell className={`hidden sm:table-cell ${user.isOnline ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground/60"}`}>{user.dataUsage}</TableCell>
+                      {user?.role === "super_admin" && !isImpersonating && (
+                        <TableCell>
+                          <Badge variant="secondary" className="font-normal">
+                            {tenants.find(t => t.id === u.tenantId)?.name || 'Unknown'}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      <TableCell><Badge variant="outline">{u.profileName}</Badge></TableCell>
+                      <TableCell className={`font-mono text-xs hidden md:table-cell ${u.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{u.mac}</TableCell>
+                      <TableCell className={`font-mono text-xs hidden lg:table-cell ${u.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{u.ip}</TableCell>
+                      <TableCell className={`hidden sm:table-cell ${u.isOnline ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground/60"}`}>{u.dataUsage}</TableCell>
                       <TableCell>
-                        {user.isOnline ? (
+                        {u.isOnline ? (
                           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 px-2 py-0.5 font-medium inline-flex items-center gap-1.5 w-fit">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             {t('users.statusOnline')}
@@ -353,7 +376,7 @@ export function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleOpenDetails(user.username)}>
+                            <DropdownMenuItem onClick={() => handleOpenDetails(u.username)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
@@ -361,14 +384,14 @@ export function UsersPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               {t('users.actionEdit')}
                             </DropdownMenuItem>
-                            {user.isOnline && (
+                            {u.isOnline && (
                               <DropdownMenuItem className="text-orange-600 focus:text-orange-600">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 {t('users.actionDisconnect')}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteUser(user.username)}>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteUser(u.username)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               {t('users.actionDelete')}
                             </DropdownMenuItem>

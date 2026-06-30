@@ -4,7 +4,7 @@ import { toast } from "react-toastify"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -50,8 +50,15 @@ type VoucherSettings = {
 }
 
 export function VouchersPage() {
-  const { user } = useAuth()
+  const { user, isImpersonating } = useAuth()
   const [batches, setBatches] = useState<VoucherBatch[]>([])
+  const [selectedTenantFilter, setSelectedTenantFilter] = useState<string>("all")
+
+  const filteredBatches = batches.filter(batch => {
+    const matchesTenant = selectedTenantFilter === "all" || batch.tenantId === selectedTenantFilter;
+    return matchesTenant;
+  })
+
   const {
     currentPage,
     setCurrentPage,
@@ -60,7 +67,7 @@ export function VouchersPage() {
     paginatedData,
     totalPages,
     totalItems
-  } = usePagination(batches)
+  } = usePagination(filteredBatches)
   const [tenants, setTenants] = useState<{id: string, name: string}[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -519,18 +526,40 @@ export function VouchersPage() {
       </div>
 
       <Card>
-        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
-          <div className="flex justify-end mb-4">
-            <Button variant="outline" size="sm" onClick={fetchBatches}>
+        <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
+          <div className="flex flex-row justify-between items-center gap-4">
+            {user?.role === "super_admin" && !isImpersonating ? (
+              <div className="w-full sm:w-64">
+                <Select value={selectedTenantFilter} onValueChange={setSelectedTenantFilter}>
+                  <SelectTrigger className="w-full bg-background border-border">
+                    <SelectValue placeholder="All Tenants" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tenants</SelectItem>
+                    {tenants.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div />
+            )}
+            <Button variant="outline" size="sm" onClick={fetchBatches} className="shrink-0">
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
           </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
           <div className="rounded-md border overflow-auto max-h-[420px]">
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead>Created Date</TableHead>
+                  {user?.role === "super_admin" && !isImpersonating && (
+                    <TableHead>Tenant / Site</TableHead>
+                  )}
                   <TableHead>Prefix</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Profile (Package)</TableHead>
@@ -540,7 +569,7 @@ export function VouchersPage() {
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={user?.role === "super_admin" && !isImpersonating ? 6 : 5} className="h-24 text-center text-muted-foreground">
                       No voucher batches found.
                     </TableCell>
                   </TableRow>
@@ -549,10 +578,14 @@ export function VouchersPage() {
                     <TableRow key={batch.id} className="hover:bg-muted/50">
                       <TableCell className="font-medium">
                         {new Date(batch.createdAt).toLocaleString()}
-                        {(user?.role === "super_admin" || user?.role === "admin") && (
-                          <div className="text-xs text-muted-foreground">Tenant: {batch.tenantId}</div>
-                        )}
                       </TableCell>
+                      {user?.role === "super_admin" && !isImpersonating && (
+                        <TableCell>
+                          <span className="inline-flex items-center rounded-md bg-secondary px-2.5 py-0.5 text-xs font-normal text-secondary-foreground">
+                            {tenants.find(t => t.id === batch.tenantId)?.name || 'Unknown'}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell>
                         {batch.prefix ? <span className="font-mono bg-muted px-2 py-1 rounded text-xs">{batch.prefix}</span> : "-"}
                       </TableCell>

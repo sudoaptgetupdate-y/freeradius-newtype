@@ -18,13 +18,10 @@ export const generateVouchersSchema = z.object({
 export const generateVouchers = async (request: FastifyRequest, reply: FastifyReply) => {
   const user = request.user as any;
   const body = request.body as z.infer<typeof generateVouchersSchema>;
-  
-  let tenantId = user.tenantId;
-  if (user.role === "super_admin" || user.role === "admin") {
-    tenantId = body.tenantId;
-    if (!tenantId) {
-      return reply.code(400).send({ error: "Tenant ID is required for master admins" });
-    }
+  const tenantId: string | null = user.tenantId || body.tenantId || null;
+
+  if (!tenantId) {
+    return reply.code(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
   }
 
   if (redisConnection.status !== "ready") {
@@ -60,12 +57,7 @@ export const getJobStatus = async (request: FastifyRequest<{ Params: { id: strin
 
 export const getVoucherBatches = async (request: FastifyRequest, reply: FastifyReply) => {
   const user = request.user as any;
-  let tenantId = user.tenantId;
-  
-  const query = request.query as any;
-  if ((user.role === "super_admin" || user.role === "admin") && query.tenantId) {
-    tenantId = query.tenantId;
-  }
+  const tenantId: string | null = user.tenantId ?? null;
   
   const batches = await db.query.voucherBatches.findMany({
     where: tenantId ? eq(voucherBatches.tenantId, tenantId) : undefined,
@@ -92,11 +84,8 @@ export const getVouchers = async (request: FastifyRequest<{ Querystring: { batch
 
 export const getVoucherSettings = async (request: FastifyRequest, reply: FastifyReply) => {
   const user = request.user as any;
-  let tenantId = user.tenantId;
-  const query = request.query as any;
-  if ((user.role === "super_admin" || user.role === "admin") && query.tenantId) {
-    tenantId = query.tenantId;
-  }
+  const tenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+
   if (!tenantId) {
     return reply.code(400).send({ error: "Tenant ID is required" });
   }
@@ -132,14 +121,10 @@ export const updateVoucherSettingsSchema = z.object({
 export const updateVoucherSettings = async (request: FastifyRequest, reply: FastifyReply) => {
   const user = request.user as any;
   const body = request.body as z.infer<typeof updateVoucherSettingsSchema>;
-  
-  let tenantId = user.tenantId;
-  if (user.role === "super_admin" || user.role === "admin") {
-    tenantId = body.tenantId || tenantId;
-  }
-  
+  const tenantId: string | null = user.tenantId || body.tenantId || null;
+
   if (!tenantId) {
-    return reply.code(400).send({ error: "Tenant ID is required" });
+    return reply.code(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
   }
 
   const [settings] = await db.insert(voucherSettings).values({
