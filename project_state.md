@@ -100,6 +100,8 @@
     - Implemented a "Hidden Form Auto-Submit" mechanism in the callback handler to pass authenticated credentials back to Mikrotik/Hotspot gateways using the `linkLogin` URL state.
     - Updated `settings.tsx` (Global Control Panel) and `portal-settings.tsx` (Wizard Step 3) to allow admins to easily configure OAuth Provider credentials.
     - Updated `login-form.tsx` on the captive portal to dynamically generate OAuth authorization URLs while securely passing gateway states (mac, ip, dst, linkLogin).
+    - Fixed backend routing redirect port mapping bug by replacing `request.hostname` with `request.host` in Fastify to preserve port number `8000` under OAuth callbacks.
+    - Documented complete multi-tunnel setup and client verification workflow using ngrok (`docs/ngrok_testing_guide.md`) for localized mobile testing alongside physical Mikrotik routers.
 
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.
