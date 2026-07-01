@@ -13,11 +13,21 @@ export const getGroups = async (request, reply) => {
             name: organizations.name,
             defaultProfile: organizations.defaultProfile,
             description: organizations.description,
+            isSystem: organizations.isSystem,
             createdAt: organizations.createdAt,
-            userCount: sql `cast(count(${userOrganizations.id}) as int)`,
+            userCount: sql `cast(count(DISTINCT CASE WHEN ${radcheck.deletedAt} IS NULL THEN ${userOrganizations.username} END) as int)`,
+            suspendedCount: sql `cast(count(DISTINCT CASE WHEN ${radcheck.deletedAt} IS NULL AND EXISTS (
+          SELECT 1 FROM radcheck rc2 
+          WHERE rc2.username = ${userOrganizations.username} 
+            AND rc2.tenant_id = ${userOrganizations.tenantId} 
+            AND rc2.attribute = 'Auth-Type' 
+            AND rc2.value = 'Reject'
+        ) THEN ${userOrganizations.username} END) as int)`,
+            deletedCount: sql `cast(count(DISTINCT CASE WHEN ${radcheck.deletedAt} IS NOT NULL THEN ${userOrganizations.username} END) as int)`,
         })
             .from(organizations)
             .leftJoin(userOrganizations, eq(organizations.id, userOrganizations.organizationId))
+            .leftJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
             .where(and(eq(organizations.tenantId, tenantId), isNull(organizations.deletedAt)))
             .groupBy(organizations.id)
             .orderBy(desc(organizations.createdAt));
@@ -105,10 +115,21 @@ export const deleteGroup = async (request, reply) => {
     const { tenantId } = request.user;
     const { id } = request.params;
     try {
+        // Check if group is a system group
+        const group = await db.query.organizations.findFirst({
+            where: and(eq(organizations.id, id), eq(organizations.tenantId, tenantId), isNull(organizations.deletedAt)),
+        });
+        if (!group) {
+            return reply.code(404).send({ error: "User group not found" });
+        }
+        if (group.isSystem) {
+            return reply.code(400).send({ error: "Cannot delete system default registration group." });
+        }
         // Check if group has members
         const memberCountResult = await db.select({ count: sql `count(*)` })
             .from(userOrganizations)
-            .where(eq(userOrganizations.organizationId, id));
+            .innerJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
+            .where(and(eq(userOrganizations.organizationId, id), isNull(radcheck.deletedAt)));
         if (memberCountResult.length > 0 && memberCountResult[0].count > 0) {
             return reply.code(400).send({ error: "Cannot delete group because it still has users." });
         }
@@ -130,7 +151,8 @@ export const bulkDisableGroupUsers = async (request, reply) => {
         // Get all usernames in this group
         const members = await db.select({ username: userOrganizations.username })
             .from(userOrganizations)
-            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId)));
+            .innerJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
+            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId), isNull(radcheck.deletedAt)));
         if (members.length === 0) {
             return reply.send({ success: true, count: 0, message: "No users in this group" });
         }
@@ -193,7 +215,8 @@ export const bulkDeleteGroupUsers = async (request, reply) => {
         // Get all usernames in this group
         const members = await db.select({ username: userOrganizations.username })
             .from(userOrganizations)
-            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId)));
+            .innerJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
+            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId), isNull(radcheck.deletedAt)));
         if (members.length === 0) {
             return reply.send({ success: true, count: 0, message: "No users in this group" });
         }
@@ -229,6 +252,147 @@ export const bulkDeleteGroupUsers = async (request, reply) => {
     catch (error) {
         request.log.error(error);
         return reply.code(500).send({ error: "Failed to bulk delete users" });
+    }
+};
+// Bulk Enable (Reactivate) All Users in Group
+export const bulkEnableGroupUsers = async (request, reply) => {
+    const { tenantId } = request.user;
+    const { id } = request.params;
+    try {
+        // Do NOT filter isNull(radcheck.deletedAt) so we can restore soft-deleted users
+        const members = await db.select({ username: userOrganizations.username })
+            .from(userOrganizations)
+            .innerJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
+            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId)));
+        if (members.length === 0) {
+            return reply.send({ success: true, count: 0, message: "No users in this group" });
+        }
+        const usernames = members.map(m => m.username);
+        // Restore soft-deleted users (set deletedAt = null)
+        await db.update(radcheck)
+            .set({ deletedAt: null })
+            .where(and(eq(radcheck.tenantId, tenantId), inArray(radcheck.username, usernames)));
+        // Remove Auth-Type = Reject
+        await db.delete(radcheck).where(and(eq(radcheck.tenantId, tenantId), inArray(radcheck.username, usernames), eq(radcheck.attribute, "Auth-Type"), eq(radcheck.value, "Reject")));
+        return reply.send({ success: true, count: usernames.length, message: `Successfully reactivated ${usernames.length} users` });
+    }
+    catch (error) {
+        request.log.error(error);
+        return reply.code(500).send({ error: "Failed to bulk reactivate users" });
+    }
+};
+// Get members of a specific group
+export const getGroupMembers = async (request, reply) => {
+    const { tenantId } = request.user;
+    const { id } = request.params;
+    try {
+        const members = await db.select({
+            id: radcheck.id,
+            username: radcheck.username,
+            profileName: radusergroup.groupname,
+        })
+            .from(userOrganizations)
+            .innerJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
+            .leftJoin(radusergroup, and(eq(radcheck.username, radusergroup.username), eq(radcheck.tenantId, radusergroup.tenantId)))
+            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId), isNull(radcheck.deletedAt)));
+        if (members.length === 0) {
+            return reply.send([]);
+        }
+        const usernames = members.map(m => m.username);
+        // Fetch active sessions to map who is online
+        const activeSessions = await db.select({
+            username: radacct.username,
+            nasipaddress: radacct.nasipaddress
+        }).from(radacct).where(and(eq(radacct.tenantId, tenantId), isNull(radacct.acctstoptime)));
+        const onlineUsernames = new Set(activeSessions.map(s => s.username));
+        // Fetch suspended users
+        const suspendedRes = await db.select({ username: radcheck.username })
+            .from(radcheck)
+            .where(and(eq(radcheck.tenantId, tenantId), inArray(radcheck.username, usernames), eq(radcheck.attribute, "Auth-Type"), eq(radcheck.value, "Reject")));
+        const suspendedUsernames = new Set(suspendedRes.map(s => s.username));
+        const result = members.map(m => ({
+            username: m.username,
+            profileName: m.profileName || "-",
+            isOnline: onlineUsernames.has(m.username),
+            isSuspended: suspendedUsernames.has(m.username)
+        }));
+        return reply.send(result);
+    }
+    catch (error) {
+        request.log.error(error);
+        return reply.code(500).send({ error: "Failed to fetch group members" });
+    }
+};
+// Bulk Transfer Users to another Group
+export const bulkTransferGroupUsers = async (request, reply) => {
+    const { tenantId } = request.user;
+    const { id } = request.params; // Source group
+    const { targetGroupId } = request.body;
+    if (!targetGroupId) {
+        return reply.code(400).send({ error: "targetGroupId is required" });
+    }
+    try {
+        // 1. Verify target group exists and get its defaultProfile
+        const targetGroupRes = await db.select().from(organizations).where(and(eq(organizations.id, targetGroupId), eq(organizations.tenantId, tenantId), isNull(organizations.deletedAt))).limit(1);
+        if (targetGroupRes.length === 0) {
+            return reply.code(404).send({ error: "Target group not found" });
+        }
+        const targetGroup = targetGroupRes[0];
+        // 2. Get users in source group
+        const members = await db.select({ username: userOrganizations.username })
+            .from(userOrganizations)
+            .innerJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
+            .where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId), isNull(radcheck.deletedAt)));
+        if (members.length === 0) {
+            return reply.send({ success: true, count: 0, message: "No users in source group to transfer" });
+        }
+        const usernames = members.map(m => m.username);
+        // 3. Update their organizationId
+        await db.update(userOrganizations).set({ organizationId: targetGroupId }).where(and(eq(userOrganizations.organizationId, id), eq(userOrganizations.tenantId, tenantId)));
+        // 4. Update their radusergroup profile if target group has a defaultProfile
+        if (targetGroup.defaultProfile) {
+            // Delete old profile assignments for these users
+            await db.delete(radusergroup).where(and(inArray(radusergroup.username, usernames), eq(radusergroup.tenantId, tenantId)));
+            // Insert new profile assignments
+            const insertValues = usernames.map(u => ({
+                tenantId,
+                username: u,
+                groupname: targetGroup.defaultProfile,
+                priority: 1
+            }));
+            await db.insert(radusergroup).values(insertValues);
+        }
+        // 5. Send CoA Disconnect for all transferred users so they get new profiles on next login
+        const activeSessions = await db.select({
+            username: radacct.username,
+            nasipaddress: radacct.nasipaddress,
+        }).from(radacct).where(and(eq(radacct.tenantId, tenantId), inArray(radacct.username, usernames), isNull(radacct.acctstoptime)));
+        if (activeSessions.length > 0) {
+            const nasRecords = await db.select().from(nas).where(eq(nas.tenantId, tenantId));
+            const nasMap = new Map(nasRecords.map(n => [n.nasname, n.secret]));
+            try {
+                const { RadiusCoAService } = await import("../services/radius-coa.service");
+                for (const session of activeSessions) {
+                    if (session.username && session.nasipaddress) {
+                        const secret = nasMap.get(session.nasipaddress);
+                        if (secret) {
+                            RadiusCoAService.disconnectUser({ ip: session.nasipaddress, secret }, session.username)
+                                .catch((e) => request.log.error(`Failed to kick ${session.username}: ${e.message}`));
+                        }
+                    }
+                }
+            }
+            catch (e) { }
+        }
+        return reply.send({
+            success: true,
+            count: usernames.length,
+            message: `Successfully transferred ${usernames.length} users to ${targetGroup.name}`
+        });
+    }
+    catch (error) {
+        request.log.error(error);
+        return reply.code(500).send({ error: "Failed to transfer users" });
     }
 };
 //# sourceMappingURL=groups.controller.js.map

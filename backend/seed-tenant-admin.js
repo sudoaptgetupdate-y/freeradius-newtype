@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 const seed = async () => { const t = await db.select().from(tenants).limit(1); if (!t[0])
     return; const existing = await db.select().from(admins).where(eq(admins.email, 'tenant@saas.local')); if (existing.length === 0) {
     const passwordHash = await bcrypt.hash('password123', 10);
-    await db.insert(admins).values({ email: 'tenant@saas.local', passwordHash, role: 'tenant_admin', tenantId: t[0].id });
+    await db.insert(admins).values({ email: 'tenant@saas.local', passwordHash, firstName: 'Tenant', lastName: 'Admin', role: 'tenant_admin', tenantId: t[0].id });
     console.log('Tenant admin created!');
 }
 else {

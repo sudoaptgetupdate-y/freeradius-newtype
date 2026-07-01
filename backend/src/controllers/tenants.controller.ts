@@ -7,6 +7,8 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { admins } from "../schema/admins";
+import { organizations } from "../schema/organizations";
+import { tenantPortalSettings } from "../schema/portal";
 
 const tenantSchema = z.object({
   name: z.string().min(1).max(255),
@@ -67,6 +69,26 @@ export const createTenant = async (request: FastifyRequest, reply: FastifyReply)
         value: defaultProfile as string,
       });
 
+      // Auto-provision default registration group
+      const [defaultGroup] = await tx.insert(organizations).values({
+        tenantId: insertedTenant.id,
+        name: "Portal Registered Users",
+        isSystem: true,
+        defaultProfile: defaultProfile as string,
+        description: "Default group for self-registered and social login users (System Protected)",
+      }).returning();
+
+      if (!defaultGroup) {
+        throw new Error("Failed to auto-provision default registration group");
+      }
+
+      // Create tenant portal settings with defaultRegisterGroupId
+      await tx.insert(tenantPortalSettings).values({
+        tenantId: insertedTenant.id,
+        orgName: tenantData.name,
+        defaultRegisterGroupId: defaultGroup.id,
+      });
+
       if (adminEmail && adminPassword) {
         // Check if admin email already exists
         const existingAdmin = await tx.select().from(admins).where(eq(admins.email, adminEmail)).limit(1);
@@ -78,6 +100,8 @@ export const createTenant = async (request: FastifyRequest, reply: FastifyReply)
         await tx.insert(admins).values({
           email: adminEmail,
           passwordHash,
+          firstName: "Tenant",
+          lastName: "Admin",
           role: "tenant_admin",
           tenantId: insertedTenant.id,
         });

@@ -31,6 +31,7 @@ description: Core guidelines and coding standards for developing the SaaS FreeRA
 ## 5. FreeRADIUS & Network Logic
 - ระลึกไว้เสมอว่าตัว FreeRADIUS ทำงานแบบ Real-time ร่วมกับ PostgreSQL
 - การจัดการ IoT ให้ใช้ตาราง `mac_bypass` แยกต่างหากจาก `radcheck`
+- **ห้าม**จัดเก็บข้อมูลส่วนบุคคล (First Name, Last Name, Phone, Email, Member ID, Citizen ID) หรือ Custom Metadata อื่นๆ ในตาราง `radcheck` หรือ `radreply` เด็ดขาด เพราะจะทำให้กระบวนการ Authen ของ FreeRADIUS ล่มจากการตรวจพบ Attribute นอก Dictionary โดยบังคับให้จัดเก็บข้อมูลเหล่านี้แยกในตาราง `userinfo` เท่านั้น
 - หากหน้าจอ UI เกี่ยวข้องกับ Traffic กราฟ ให้พิจารณาว่าต้องดึงจาก `radacct` (Postgres) หรือ `LogQL` (Loki)
 
 ---

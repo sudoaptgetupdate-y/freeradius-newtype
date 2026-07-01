@@ -7,6 +7,10 @@ import bcrypt from "bcrypt";
 const adminSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6).optional(), // Optional for update
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    phone: z.string().optional(),
+    status: z.enum(["active", "suspended"]).optional(),
     role: z.enum(["super_admin", "master_staff", "tenant_admin", "tenant_staff"]),
     tenantId: z.string().uuid().optional().nullable(),
 });
@@ -17,18 +21,28 @@ export const getAdmins = async (request, reply) => {
         if (user.role === "super_admin" || user.role === "admin") {
             result = await db.select({
                 id: admins.id,
+                firstName: admins.firstName,
+                lastName: admins.lastName,
                 email: admins.email,
+                phone: admins.phone,
+                status: admins.status,
                 role: admins.role,
                 tenantId: admins.tenantId,
+                lastLoginAt: admins.lastLoginAt,
                 createdAt: admins.createdAt,
             }).from(admins).where(isNull(admins.deletedAt));
         }
         else {
             result = await db.select({
                 id: admins.id,
+                firstName: admins.firstName,
+                lastName: admins.lastName,
                 email: admins.email,
+                phone: admins.phone,
+                status: admins.status,
                 role: admins.role,
                 tenantId: admins.tenantId,
+                lastLoginAt: admins.lastLoginAt,
                 createdAt: admins.createdAt,
             }).from(admins).where(and(eq(admins.tenantId, user.tenantId), isNull(admins.deletedAt)));
         }
@@ -59,11 +73,19 @@ export const createAdmin = async (request, reply) => {
         const newAdmin = await db.insert(admins).values({
             email: data.email,
             passwordHash,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone || null,
+            status: data.status || "active",
             role: data.role,
             tenantId: data.tenantId || null,
         }).returning({
             id: admins.id,
+            firstName: admins.firstName,
+            lastName: admins.lastName,
             email: admins.email,
+            phone: admins.phone,
+            status: admins.status,
             role: admins.role,
             tenantId: admins.tenantId,
         });
@@ -97,10 +119,16 @@ export const updateAdmin = async (request, reply) => {
         }
         const updateData = {
             email: data.email,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone || null,
             role: data.role,
             tenantId: data.tenantId || null,
             updatedAt: new Date(),
         };
+        if (data.status) {
+            updateData.status = data.status;
+        }
         if (data.password) {
             updateData.passwordHash = await bcrypt.hash(data.password, 10);
         }
@@ -109,7 +137,11 @@ export const updateAdmin = async (request, reply) => {
             .where(eq(admins.id, id))
             .returning({
             id: admins.id,
+            firstName: admins.firstName,
+            lastName: admins.lastName,
             email: admins.email,
+            phone: admins.phone,
+            status: admins.status,
             role: admins.role,
             tenantId: admins.tenantId,
         });

@@ -16,6 +16,7 @@ export const getGroups = async (request: FastifyRequest, reply: FastifyReply) =>
         name: organizations.name,
         defaultProfile: organizations.defaultProfile,
         description: organizations.description,
+        isSystem: organizations.isSystem,
         createdAt: organizations.createdAt,
         userCount: sql<number>`cast(count(DISTINCT CASE WHEN ${radcheck.deletedAt} IS NULL THEN ${userOrganizations.username} END) as int)`,
         suspendedCount: sql<number>`cast(count(DISTINCT CASE WHEN ${radcheck.deletedAt} IS NULL AND EXISTS (
@@ -149,6 +150,19 @@ export const deleteGroup = async (request: FastifyRequest, reply: FastifyReply) 
   const { id } = request.params as { id: string };
 
   try {
+    // Check if group is a system group
+    const group = await db.query.organizations.findFirst({
+      where: and(eq(organizations.id, id), eq(organizations.tenantId, tenantId), isNull(organizations.deletedAt)),
+    });
+
+    if (!group) {
+      return reply.code(404).send({ error: "User group not found" });
+    }
+
+    if (group.isSystem) {
+      return reply.code(400).send({ error: "Cannot delete system default registration group." });
+    }
+
     // Check if group has members
     const memberCountResult = await db.select({ count: sql<number>`count(*)` })
       .from(userOrganizations)

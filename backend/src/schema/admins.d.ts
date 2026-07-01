@@ -74,6 +74,82 @@ export declare const admins: import("drizzle-orm/pg-core").PgTableWithColumns<{
         }, {}, {
             length: 255;
         }>;
+        firstName: import("drizzle-orm/pg-core").PgColumn<{
+            name: "first_name";
+            tableName: "admins";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 255;
+        }>;
+        lastName: import("drizzle-orm/pg-core").PgColumn<{
+            name: "last_name";
+            tableName: "admins";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 255;
+        }>;
+        phone: import("drizzle-orm/pg-core").PgColumn<{
+            name: "phone";
+            tableName: "admins";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 50;
+        }>;
+        status: import("drizzle-orm/pg-core").PgColumn<{
+            name: "status";
+            tableName: "admins";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: "active" | "suspended";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["active", "suspended"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
         role: import("drizzle-orm/pg-core").PgColumn<{
             name: "role";
             tableName: "admins";
@@ -92,6 +168,42 @@ export declare const admins: import("drizzle-orm/pg-core").PgTableWithColumns<{
             generated: undefined;
         }, {}, {
             length: number | undefined;
+        }>;
+        lastLoginAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "last_login_at";
+            tableName: "admins";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        lastLoginIp: import("drizzle-orm/pg-core").PgColumn<{
+            name: "last_login_ip";
+            tableName: "admins";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 45;
         }>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "created_at";

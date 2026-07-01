@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, text, boolean, timestamp } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
+import { organizations } from "./organizations";
 
 export const tenantPortalSettings = pgTable("tenant_portal_settings", {
   tenantId: uuid("tenant_id").primaryKey().references(() => tenants.id, { onDelete: "cascade" }),
@@ -9,6 +10,7 @@ export const tenantPortalSettings = pgTable("tenant_portal_settings", {
   footerNote: text("footer_note"),
   isRegisterEnabled: boolean("is_register_enabled").notNull().default(true),
   isSocialLoginEnabled: boolean("is_social_login_enabled").notNull().default(true),
+  defaultRegisterGroupId: uuid("default_register_group_id").references(() => organizations.id),
   themeColor: varchar("theme_color", { length: 10 }).notNull().default("#0A2540"),
   welcomeMessage: text("welcome_message"),
   leftBgColor: varchar("left_bg_color", { length: 10 }).notNull().default("#071D33"),

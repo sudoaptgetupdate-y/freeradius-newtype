@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Plus, Edit, Trash2, Building, Loader2, UserCog, Mail, ShieldAlert } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Building, Loader2, Mail, ShieldAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
@@ -33,9 +33,14 @@ import { DataTablePagination } from "@/components/data-table-pagination"
 
 type AdminData = {
   id: string
+  firstName: string
+  lastName: string
+  phone: string | null
   email: string
+  status: string
   role: string
   tenantId: string | null
+  lastLoginAt: string | null
   createdAt: string
 }
 
@@ -59,8 +64,12 @@ export default function AdminsPage() {
   
   // Form State
   const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
     email: "",
     password: "",
+    status: "active",
     role: "tenant_admin",
     tenantId: ""
   })
@@ -122,7 +131,7 @@ export default function AdminsPage() {
       }
       
       setIsDialogOpen(false)
-      setFormData({ email: "", password: "", role: "tenant_admin", tenantId: "" })
+      setFormData({ firstName: "", lastName: "", phone: "", email: "", password: "", status: "active", role: "tenant_admin", tenantId: "" })
       setEditingId(null)
       toast.success(editingId ? "User updated successfully!" : "User created successfully!")
       fetchAdmins()
@@ -137,15 +146,19 @@ export default function AdminsPage() {
 
   const handleOpenCreate = () => {
     setEditingId(null)
-    setFormData({ email: "", password: "", role: "tenant_admin", tenantId: "" })
+    setFormData({ firstName: "", lastName: "", phone: "", email: "", password: "", status: "active", role: "tenant_admin", tenantId: "" })
     setIsDialogOpen(true)
   }
 
   const handleOpenEdit = (admin: AdminData) => {
     setEditingId(admin.id)
     setFormData({
+      firstName: admin.firstName,
+      lastName: admin.lastName,
+      phone: admin.phone || "",
       email: admin.email,
       password: "", // empty for update
+      status: admin.status,
       role: admin.role,
       tenantId: admin.tenantId || ""
     })
@@ -177,6 +190,8 @@ export default function AdminsPage() {
 
   const filteredAdmins = adminsList.filter(admin => 
     admin.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    admin.firstName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    admin.lastName.toLowerCase().includes(searchQuery.toLowerCase()) || 
     admin.role.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -230,18 +245,19 @@ export default function AdminsPage() {
             <Table className="min-w-[700px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[250px]">{t('admins.colEmail')}</TableHead>
-                  <TableHead>{t('admins.colRole')}</TableHead>
+                  <TableHead className="w-[280px]">Admin User</TableHead>
+                  <TableHead>Role & Status</TableHead>
                   {user?.role === "super_admin" && (
                     <TableHead>{t('admins.colTenant')}</TableHead>
                   )}
+                  <TableHead>Last Login</TableHead>
                   <TableHead className="text-right">{t('admins.colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={user?.role === "super_admin" ? 4 : 3} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={user?.role === "super_admin" ? 5 : 4} className="h-24 text-center text-muted-foreground">
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -249,15 +265,23 @@ export default function AdminsPage() {
                   paginatedData.map((admin) => (
                     <TableRow key={admin.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">
-                        <div className="flex items-center">
-                          <UserCog className="mr-2 h-4 w-4 text-muted-foreground" />
-                          {admin.email}
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{admin.firstName} {admin.lastName}</span>
+                          <span className="text-xs text-muted-foreground flex items-center mt-1">
+                            <Mail className="mr-1 h-3 w-3" /> {admin.email}
+                            {admin.phone && <span className="ml-2">({admin.phone})</span>}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={getRoleBadgeColor(admin.role)}>
-                          {admin.role.replace('_', ' ').toUpperCase()}
-                        </Badge>
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge variant="outline" className={getRoleBadgeColor(admin.role)}>
+                            {admin.role.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                          <Badge variant={admin.status === 'active' ? 'default' : 'secondary'} className="text-[10px] h-4">
+                            {admin.status.toUpperCase()}
+                          </Badge>
+                        </div>
                       </TableCell>
                       {user?.role === "super_admin" && (
                         <TableCell>
@@ -271,6 +295,9 @@ export default function AdminsPage() {
                           )}
                         </TableCell>
                       )}
+                      <TableCell className="text-sm text-muted-foreground">
+                        {admin.lastLoginAt ? new Date(admin.lastLoginAt).toLocaleString() : 'Never'}
+                      </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(admin)}>
                           <Edit className="h-4 w-4" />
@@ -303,75 +330,121 @@ export default function AdminsPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
-          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-gradient-to-r from-slate-800 to-slate-900">
-            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-white pr-6">
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
               {editingId ? "Edit System User" : t('admins.addAdmin')}
             </DialogTitle>
-            <DialogDescription className="text-[13px] sm:text-[14px] text-slate-300 mt-1 sm:mt-1.5">
+            <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
               {editingId ? "Update user account information and roles." : "Create a new user account for the system."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateAdmin} className="flex flex-col flex-1 min-h-0">
             <div className="grid gap-4 px-5 sm:px-7 py-4 flex-1 overflow-y-auto">
               
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-[14px] font-semibold text-foreground">
-                  Email Address
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="firstName" className="text-[14px] font-semibold text-foreground">First Name</Label>
                   <Input 
-                    id="email" 
-                    type="email"
-                    value={formData.email} 
-                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                    placeholder="user@example.com" 
+                    id="firstName" 
+                    value={formData.firstName} 
+                    onChange={e => setFormData({...formData, firstName: e.target.value})} 
+                    placeholder="John" 
                     required 
-                    className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    className="h-[44px] rounded-[8px] border-border text-[14px] bg-background"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-[14px] font-semibold text-foreground">
-                  Password {editingId && <span className="text-muted-foreground font-normal text-xs">(Leave empty to keep current)</span>}
-                </Label>
-                <div className="relative">
-                  <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="space-y-1.5">
+                  <Label htmlFor="lastName" className="text-[14px] font-semibold text-foreground">Last Name</Label>
                   <Input 
-                    id="password" 
-                    type="password"
-                    value={formData.password} 
-                    onChange={e => setFormData({...formData, password: e.target.value})} 
-                    placeholder={editingId ? "Enter new password" : "Secure password"} 
-                    required={!editingId}
-                    className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    id="lastName" 
+                    value={formData.lastName} 
+                    onChange={e => setFormData({...formData, lastName: e.target.value})} 
+                    placeholder="Doe" 
+                    required 
+                    className="h-[44px] rounded-[8px] border-border text-[14px] bg-background"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="role" className="text-[14px] font-semibold text-foreground">
-                  User Role
-                </Label>
-                <div className="relative">
-                  <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-[14px] font-semibold text-foreground">
+                    Email Address
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="email" 
+                      type="email"
+                      value={formData.email} 
+                      onChange={e => setFormData({...formData, email: e.target.value})} 
+                      placeholder="user@example.com" 
+                      required 
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-[14px] font-semibold text-foreground">
+                    Password {editingId && <span className="text-muted-foreground font-normal text-xs">(Keep current)</span>}
+                  </Label>
+                  <div className="relative">
+                    <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="password" 
+                      type="password"
+                      value={formData.password} 
+                      onChange={e => setFormData({...formData, password: e.target.value})} 
+                      placeholder={editingId ? "Enter new password" : "Secure password"} 
+                      required={!editingId}
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5 sm:col-span-1">
+                  <Label htmlFor="phone" className="text-[14px] font-semibold text-foreground">Phone Number</Label>
+                  <Input 
+                    id="phone" 
+                    value={formData.phone} 
+                    onChange={e => setFormData({...formData, phone: e.target.value})} 
+                    placeholder="+1234567890" 
+                    className="h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="role" className="text-[14px] font-semibold text-foreground">User Role</Label>
                   <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
-                    <SelectTrigger id="role" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                    <SelectTrigger id="role" className="w-full h-[44px] rounded-[8px] border-border text-[14px] bg-background">
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
-                  <SelectContent>
-                    {user?.role === "super_admin" && (
-                      <>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
-                        <SelectItem value="master_staff">Master Staff</SelectItem>
-                      </>
-                    )}
-                    <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
-                    <SelectItem value="tenant_staff">Tenant Staff</SelectItem>
-                  </SelectContent>
-                </Select>
+                    <SelectContent>
+                      {user?.role === "super_admin" && (
+                        <>
+                          <SelectItem value="super_admin">Super Admin</SelectItem>
+                          <SelectItem value="master_staff">Master Staff</SelectItem>
+                        </>
+                      )}
+                      <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                      <SelectItem value="tenant_staff">Tenant Staff</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="status" className="text-[14px] font-semibold text-foreground">Status</Label>
+                  <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
+                    <SelectTrigger id="status" className="w-full h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

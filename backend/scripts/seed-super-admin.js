@@ -6,8 +6,8 @@ import dotenv from "dotenv";
 dotenv.config();
 const seed = async () => {
     console.log("Seeding Super Admin...");
-    const email = "admin@saas.local";
-    const password = "password123";
+    const email = "arichai.ko@gmail.com";
+    const password = "lkfgxifde";
     // Check if exists
     const existing = await db.select().from(admins).where(eq(admins.email, email));
     if (existing.length > 0) {
@@ -18,6 +18,9 @@ const seed = async () => {
     await db.insert(admins).values({
         email,
         passwordHash,
+        firstName: "System",
+        lastName: "Admin",
+        status: "active",
         role: "super_admin",
     });
     console.log(`Super admin created!`);

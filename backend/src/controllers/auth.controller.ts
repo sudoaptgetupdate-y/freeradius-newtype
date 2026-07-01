@@ -12,6 +12,14 @@ export const login = async (request: FastifyRequest, reply: FastifyReply) => {
     const input = request.body as LoginInput;
     const user = await authService.login(input);
 
+    // Record Last Login Time and IP
+    await db.update(admins)
+      .set({ 
+        lastLoginAt: new Date(), 
+        lastLoginIp: request.ip 
+      })
+      .where(eq(admins.id, user.id));
+
     // Generate JWT
     const token = await reply.jwtSign(user);
 

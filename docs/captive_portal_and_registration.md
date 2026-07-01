@@ -25,6 +25,7 @@ CREATE TABLE tenant_portal_settings (
     footer_note TEXT,
     is_register_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     is_social_login_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    default_register_group_id UUID REFERENCES organizations(id), -- กลุ่มผู้ใช้งานเริ่มต้นสำหรับการลงทะเบียนผ่านหน้าเว็บ
     theme_color VARCHAR(10) NOT NULL DEFAULT '#3b82f6', -- รหัสสี HEX สำหรับปุ่มและธีมหน้านั้นๆ
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -73,7 +74,7 @@ sequenceDiagram
     Portal->>API: ส่ง Token ตรวจสอบความถูกต้อง (POST /api/v1/auth/social)
     API->>API: ตรวจสอบความถูกต้องของ Token กับ Server ของ Google/LINE
     alt เป็นผู้ใช้ใหม่
-        API->>DB: ลงทะเบียน User ใหม่ในตาราง radcheck (เช่น google_102938)<br/>พร้อมผูก Default Profile ของ Tenant นั้น
+        API->>DB: ลงทะเบียน User ใหม่ในตาราง radcheck (เช่น google_102938)<br/>ผูกกลุ่มผ่านตาราง user_organizations (กลุ่มลงทะเบียนหน้าเว็บ)<br/>บันทึกประวัติลงตาราง userinfo และผูก Default Profile
     else เป็นผู้ใช้เดิม
         API->>API: ค้นหา Username/Password จากประวัติเดิม
     end
@@ -93,7 +94,9 @@ sequenceDiagram
 4.  **ตรวจสอบและจัดเก็บข้อมูล**:
     *   ระบบตรวจสอบสิทธิ์ป้องกันการสมัคร Username ซ้ำในตาราง `radcheck`
     *   บันทึกบัญชีลงตาราง `radcheck` (ข้อมูลยืนยันตัวตน)
-    *   เพิ่มบัญชีลงตาราง `radusergroup` โดยกำหนดกลุ่มเป็นค่า `default_register_profile` ของ Tenant นั้นๆ อัตโนมัติ
+    *   ผูกบัญชีเข้ากับตาราง `user_organizations` (กลุ่มสมัครหน้าเว็บ) อัตโนมัติ โดยระบุค่า `defaultRegisterGroupId` ที่ได้มาจากตั้งค่า Portal Settings ของ Tenant
+    *   บันทึกข้อมูลส่วนตัว (ชื่อจริง, นามสกุล, โทรศัพท์) ลงตาราง `userinfo`
+    *   เพิ่มบัญชีลงตาราง `radusergroup` โดยผูกกับโปรไฟล์ของ Tenant อัตโนมัติ
 5.  **ล็อกอิน**: หน้าเว็บจะทำ Auto-Login นำบัญชีที่สมัครเข้าสวมสิทธิ์ผ่านหน้า Hotspot ในทันที
 
 ---

@@ -5,6 +5,7 @@ export declare class TelegramService {
     private constructor();
     static getInstance(): TelegramService;
     initBot(token: string): Promise<void>;
+    private ensureInitialized;
     processUpdate(update: any): Promise<void>;
     private handleMessage;
     private handleCallbackQuery;
@@ -13,10 +14,13 @@ export declare class TelegramService {
     private handleStatusCommand;
     private handleFindCommand;
     private handleUserCommand;
+    private handleGroupCommand;
     private handleVoucherCommand;
     private handleKickCallback;
     private handleSuspendCallback;
     private handleReactivateCallback;
+    private handleSuspendGroupCallback;
+    private handleReactivateGroupCallback;
     private showDeleteConfirmation;
     private handleDeleteCallback;
     sendMasterAlert(message: string): Promise<void>;

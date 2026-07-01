@@ -42,8 +42,10 @@ erDiagram
     tenants ||--o{ radusergroup : "assigns users to profiles"
     tenants ||--o{ radacct : "collects accounting logs"
     tenants ||--o{ organizations : "has groups"
+    tenants ||--o{ userinfo : "stores personal info of users"
     organizations ||--o{ user_organizations : "has members"
     radcheck ||--o{ user_organizations : "belongs to groups"
+    radcheck ||--o| userinfo : "has profile details"
 
     tenants {
         uuid id PK
@@ -88,7 +90,35 @@ erDiagram
         int radcheck_id FK
         uuid tenant_id FK
     }
+    userinfo {
+        int id PK
+        uuid tenant_id FK
+        varchar username FK
+        varchar first_name
+        varchar last_name
+        varchar member_id
+        varchar citizen_id
+        varchar email
+        varchar phone
+    }
 ```
+
+### 2.3 ตาราง `userinfo`
+เก็บข้อมูลรายละเอียดข้อมูลส่วนตัวของผู้ใช้งานอินเทอร์เน็ต (แยกระดับ Tenant ป้องกัน FreeRADIUS ล่มจากการใช้ Custom Attribute ใน `radreply`)
+
+| ชื่อคอลัมน์ | ประเภทข้อมูล | คำอธิบาย |
+| :--- | :--- | :--- |
+| `id` | `serial` | Primary Key |
+| `tenant_id` | `uuid` | Foreign Key (อ้างอิง `tenants.id`) |
+| `username` | `varchar(64)` | ชื่อผู้ใช้งาน |
+| `first_name` | `varchar(200)`| ชื่อจริง |
+| `last_name` | `varchar(200)` | นามสกุล |
+| `member_id` | `varchar(100)` | รหัสสมาชิก / รหัสพนักงาน |
+| `citizen_id`| `varchar(100)` | รหัสประจำตัวประชาชน (Optional) |
+| `email` | `varchar(200)` | อีเมล (Optional) |
+| `phone` | `varchar(50)` | เบอร์โทรศัพท์ (Optional) |
+| `created_at`| `timestamp` | วันที่สร้างข้อมูล |
+| `updated_at`| `timestamp` | วันที่แก้ไขข้อมูลล่าสุด |
 
 ---
 

@@ -233,6 +233,23 @@ export declare const tenants: import("drizzle-orm/pg-core").PgTableWithColumns<{
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        trashRetentionDays: import("drizzle-orm/pg-core").PgColumn<{
+            name: "trash_retention_days";
+            tableName: "tenants";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
     };
     dialect: "pg";
 }>;

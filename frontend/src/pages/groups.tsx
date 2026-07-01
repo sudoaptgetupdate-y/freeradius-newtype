@@ -42,6 +42,7 @@ interface Group {
   userCount: number
   suspendedCount?: number
   deletedCount?: number
+  isSystem?: boolean
 }
 
 interface Profile {
@@ -285,7 +286,16 @@ export default function Groups() {
             ) : (
               filteredGroups.map((g) => (
                 <TableRow key={g.id}>
-                  <TableCell className="font-medium">{g.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{g.name}</span>
+                      {g.isSystem && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20" title="System Group (Cannot be deleted)">
+                          SYSTEM
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{g.description || "-"}</TableCell>
                   <TableCell>
                     {g.defaultProfile ? (
@@ -347,7 +357,7 @@ export default function Groups() {
                           )}
                           
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDelete(g)} disabled={g.userCount > 0}>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDelete(g)} disabled={g.userCount > 0 || g.isSystem}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Group
                           </DropdownMenuItem>

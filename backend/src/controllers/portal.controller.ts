@@ -3,6 +3,8 @@ import { db } from "../db";
 import { tenantPortalSettings } from "../schema/portal";
 import { tenants } from "../schema/tenants";
 import { radcheck, radusergroup, radreply } from "../schema/freeradius";
+import { userinfo } from "../schema/userinfo";
+import { userOrganizations } from "../schema/organizations";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
@@ -245,21 +247,21 @@ export const registerUser = async (
         priority: 1,
       });
 
-      // Store additional details in radreply (Custom or Informational attributes)
-      // This is a common way to store extra info if a dedicated 'users' table is not present
-      if (body.firstName) {
-        await tx.insert(radreply).values({
-          tenantId, username: body.username, attribute: "User-First-Name", op: "=", value: body.firstName
-        });
-      }
-      if (body.lastName) {
-        await tx.insert(radreply).values({
-          tenantId, username: body.username, attribute: "User-Last-Name", op: "=", value: body.lastName
-        });
-      }
-      if (body.phone) {
-        await tx.insert(radreply).values({
-          tenantId, username: body.username, attribute: "User-Phone", op: "=", value: body.phone
+      // Store additional details in userinfo
+      await tx.insert(userinfo).values({
+        tenantId,
+        username: body.username,
+        firstName: body.firstName || null,
+        lastName: body.lastName || null,
+        phone: body.phone || null,
+      });
+
+      // Bind to default group if configured
+      if (settings && settings.defaultRegisterGroupId) {
+        await tx.insert(userOrganizations).values({
+          tenantId,
+          username: body.username,
+          organizationId: settings.defaultRegisterGroupId,
         });
       }
     });

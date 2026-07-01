@@ -2,6 +2,8 @@ import { db } from "../db";
 import { tenantPortalSettings } from "../schema/portal";
 import { tenants } from "../schema/tenants";
 import { radcheck, radusergroup, radreply } from "../schema/freeradius";
+import { userinfo } from "../schema/userinfo";
+import { userOrganizations } from "../schema/organizations";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 // --- Validation Schemas ---
@@ -24,6 +26,7 @@ export const updateSettingsSchema = z.object({
     lineChannelSecretOverride: z.string().optional().nullable(),
     telegramEnabled: z.boolean().optional(),
     telegramChatId: z.string().max(100).optional().nullable(),
+    trashRetentionDays: z.number().min(1).max(365).optional().default(30),
 });
 export const registerUserSchema = z.object({
     username: z.string().min(4).max(64),
@@ -106,6 +109,7 @@ export const getPortalSettingsAdmin = async (request, reply) => {
         googleClientSecretOverride: settings?.googleClientSecretOverride || "",
         lineChannelIdOverride: settings?.lineChannelIdOverride || "",
         lineChannelSecretOverride: settings?.lineChannelSecretOverride || "",
+        trashRetentionDays: tenant.trashRetentionDays ?? 30,
     };
     return reply.send(responsePayload);
 };
@@ -119,11 +123,12 @@ export const updatePortalSettings = async (request, reply) => {
     if (!tenantId) {
         return reply.code(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
-    // 1. Separate Telegram fields to update tenants table
-    const { telegramEnabled, telegramChatId, ...portalData } = body;
+    // 1. Separate Tenant fields to update tenants table
+    const { telegramEnabled, telegramChatId, trashRetentionDays, ...portalData } = body;
     await db.update(tenants).set({
         telegramEnabled: telegramEnabled ?? false,
         telegramChatId: telegramChatId || null,
+        trashRetentionDays: trashRetentionDays ?? 30,
         updatedAt: new Date()
     }).where(eq(tenants.id, tenantId));
     // 2. Update portal settings table
@@ -135,14 +140,14 @@ export const updatePortalSettings = async (request, reply) => {
             ...portalData,
             updatedAt: new Date(),
         }).where(eq(tenantPortalSettings.tenantId, tenantId)).returning();
-        return reply.send({ ...updated, telegramEnabled, telegramChatId });
+        return reply.send({ ...updated, telegramEnabled, telegramChatId, trashRetentionDays });
     }
     else {
         const [inserted] = await db.insert(tenantPortalSettings).values({
             tenantId,
             ...portalData,
         }).returning();
-        return reply.status(201).send({ ...inserted, telegramEnabled, telegramChatId });
+        return reply.status(201).send({ ...inserted, telegramEnabled, telegramChatId, trashRetentionDays });
     }
 };
 /**
@@ -195,21 +200,20 @@ export const registerUser = async (request, reply) => {
                 groupname: tenant.defaultRegisterProfile,
                 priority: 1,
             });
-            // Store additional details in radreply (Custom or Informational attributes)
-            // This is a common way to store extra info if a dedicated 'users' table is not present
-            if (body.firstName) {
-                await tx.insert(radreply).values({
-                    tenantId, username: body.username, attribute: "User-First-Name", op: "=", value: body.firstName
-                });
-            }
-            if (body.lastName) {
-                await tx.insert(radreply).values({
-                    tenantId, username: body.username, attribute: "User-Last-Name", op: "=", value: body.lastName
-                });
-            }
-            if (body.phone) {
-                await tx.insert(radreply).values({
-                    tenantId, username: body.username, attribute: "User-Phone", op: "=", value: body.phone
+            // Store additional details in userinfo
+            await tx.insert(userinfo).values({
+                tenantId,
+                username: body.username,
+                firstName: body.firstName || null,
+                lastName: body.lastName || null,
+                phone: body.phone || null,
+            });
+            // Bind to default group if configured
+            if (settings && settings.defaultRegisterGroupId) {
+                await tx.insert(userOrganizations).values({
+                    tenantId,
+                    username: body.username,
+                    organizationId: settings.defaultRegisterGroupId,
                 });
             }
         });

@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-07-01
 
-## Current Phase: Phase 16 Completed (User Group / Organizations System)
+## Current Phase: Phase 16 Completed (User Groups & RADIUS Stabilization)
 
 ### ✅ What has been completed:
 1. **Requirements & Architecture (Phase 1):**
@@ -117,6 +117,26 @@
     - Integrated `groups` route into `App.tsx` and sidebar navigation in `dashboard.tsx`.
     - Updated `docs/product_features_and_roles.md`: expanded Groups/Organizations section with Profile Inheritance, Bulk actions, and User Details feature. Updated Users section to reflect Group-based creation flow. Clarified Voucher remains Profile-direct (stateless).
     - Updated `docs/tenant_management.md`: added `organizations` and `user_organizations` to ERD and schema tables, added section 3.1.1 documenting the relationship between `primary_device_type`, Default Profile, and Groups.
+23. **Telegram Bot Integration (Phase 15):**
+    - Developed a comprehensive `TelegramService` handling multi-tenant slash commands `/status`, `/user`, `/find`, `/group`, `/voucher`.
+    - Integrated inline button callback actions (`kick`, `suspend`, `reactivate`, `delete`, `suspend_group`, `reactivate_group`) for live action execution.
+    - Implemented a self-healing auto-initialization mechanism fetching Telegram Bot tokens dynamically from DB global settings.
+    - Completed the `/voucher <count> <package>` command, validating requests under tenant contexts, sending generation jobs to BullMQ `voucherQueue`, polling for completion, and formatting outputs directly back to the chat.
+    - Configured a Fastify webhook endpoint `/api/v1/webhooks/telegram/:token` linked to the service's update loop.
+24. **CSV Bulk Import, Expiration Date Polishing & RADIUS Auth Stabilization (Phase 16 - Completed):**
+    - Installed `papaparse` on the frontend for robust, client-side CSV parsing.
+    - Added a "Bulk Import" modal to `users.tsx` that lets Tenant Admins download a CSV template with decorated headers mapping required vs optional fields (`Username*`, `Password*`, etc.), upload files, and preview data with validation (missing username/password detection) before confirming.
+    - Implemented `POST /bulk-import` on the backend (`users.bulk.controller.ts` and `users.routes.ts`) utilizing transactional chunking (500 users per batch) for high-performance inserts.
+    - Enhanced the `Expiration Date` input field in the Add/Edit User dialogs to dynamically toggle input types on focus/blur, enabling a native placeholder that displays "No Expire" when empty, making it clear that leaving the field blank means the user account never expires.
+    - Created the `userinfo` database schema to store personal metadata (First/Last name, Phone, Email, etc.) separate from FreeRADIUS authentication tables.
+    - Refactored `users.controller.ts`, `users.bulk.controller.ts`, and `portal.controller.ts` to save and fetch personal data to/from the `userinfo` table, eliminating RADIUS authorization crashes due to unrecognized `radreply` custom attributes.
+    - Executed a migration script to move existing users' metadata out of `radreply` to `userinfo` and cleaned up the `radreply` table.
+25. **Default Registration Group & Auto-Provisioning (Phase 16 - Completed):**
+    - Added `isSystem` column to `organizations` table to support system-protected default groups.
+    - Added `defaultRegisterGroupId` to `tenantPortalSettings` to store a reference to each tenant's default registration group.
+    - Updated `createTenant` to automatically provision a protected "Portal Registered Users" group with `isSystem = true` and link it to the tenant's portal settings during initialization.
+    - Modified Captive Portal Self-Registration and Social Login flows to dynamically fetch the default registration group and automatically link new sign-ups to it via `user_organizations`, ensuring all portal sign-ups belong to a manageable group and inherit its Internet Profile.
+    - Updated the `deleteGroup` API route and frontend `groups.tsx` page to restrict deletion of system-created default groups (marked with a new `SYSTEM` badge in the UI), while allowing edits to group names and profile mappings.
 
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.
@@ -129,15 +149,11 @@
    - Added standard styling guidelines for React Dialogs in `AGENTS.md`.
 
 ### 🚧 MVP STATUS: IN PROGRESS (Missing Core Features)
-- Phase 1 to 12 have been successfully completed. 
+- Phases 1 to 16 have been successfully completed. 
 - However, several critical requirements from the SRS are still pending implementation to achieve true MVP for a SaaS Hotspot system.
 
 ### 🎯 Next Steps & Pending Phases:
-1. **Phase 15: Telegram Bot Integration (REQ-SAAS-06)**
-   - Implement `webhooks.controller.ts` Webhook endpoint to process slash commands and interact with users via Telegram.
-   - Design interactive Telegram Card UI for `/user`, `/find`, `/status`, and `/voucher` commands with Inline Keyboards (Approve, Kick, Suspend, Extend).
-   - Support system alert webhooks (server status for Master Admin, NAS offline for Tenant Admin).
-2. **Phase 17: Walled Garden & MAB (REQ-MTK-03)**
+1. **Phase 17: Walled Garden & MAB (REQ-MTK-03)**
    - Implement UI for `mac_bypass` schema to manage IoT devices and Walled Garden lists.
 3. **Phase 18: True Grafana Loki Integration (REQ-LOG-01)**
    - Replace the current "Mock" logs in the Dashboard with real LogQL queries to Grafana Loki.

@@ -1,9 +1,10 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
-import { radcheck, radacct } from "../schema/freeradius";
+import { radcheck, radacct, radreply, radusergroup } from "../schema/freeradius";
 import { userOrganizations, organizations } from "../schema/organizations";
 import { nas } from "../schema/nas";
 import { eq, and, inArray, isNull } from "drizzle-orm";
+import { userinfo } from "../schema/userinfo";
 import { RadiusCoAService } from "../services/radius-coa.service";
 
 // Helper to disconnect users
@@ -180,5 +181,139 @@ export const bulkTransferUsers = async (request: FastifyRequest, reply: FastifyR
   } catch (error: any) {
     request.log.error(error);
     return reply.code(500).send({ error: "Failed to bulk transfer users" });
+  }
+};
+
+export const bulkImportUsers = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { tenantId } = request.user as { tenantId: string };
+  const { users } = request.body as {
+    users: Array<{
+      username: string;
+      password: string;
+      firstName?: string;
+      lastName?: string;
+      memberId?: string;
+      citizenId?: string;
+      email?: string;
+      phone?: string;
+      expiration?: string;
+      groupId?: string;
+    }>
+  };
+
+  if (!users || users.length === 0) {
+    return reply.status(400).send({ error: "No users provided" });
+  }
+
+  try {
+    // Collect usernames to check for duplicates
+    const usernames = users.map(u => u.username);
+
+    // Chunk array helper
+    const chunkArray = (arr: any[], size: number): any[][] =>
+      arr.length > 0 ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];
+
+    // Check existing
+    let existingUsernames: string[] = [];
+    for (const chunk of chunkArray(usernames, 500)) {
+       const existing = await db.select({ username: radcheck.username })
+        .from(radcheck)
+        .where(and(eq(radcheck.tenantId, tenantId), inArray(radcheck.username, chunk)));
+       existingUsernames.push(...existing.map(e => e.username));
+    }
+
+    if (existingUsernames.length > 0) {
+      // Remove duplicates from the array
+      const uniqueExisting = Array.from(new Set(existingUsernames)).slice(0, 5).join(", ");
+      const moreMsg = existingUsernames.length > 5 ? ` and ${existingUsernames.length - 5} more` : '';
+      return reply.status(409).send({ error: `The following usernames already exist: ${uniqueExisting}${moreMsg}` });
+    }
+
+    const radcheckInserts: any[] = [];
+    const userInfoInserts: any[] = [];
+    const userOrgInserts: any[] = [];
+    const radusergroupInserts: any[] = [];
+
+    // Pre-fetch all groups in this tenant for validating and mapping default profiles
+    const groups = await db.select().from(organizations).where(eq(organizations.tenantId, tenantId));
+    const groupMap = new Map(groups.map(g => [g.id, g]));
+
+    for (const u of users) {
+      // 1. Password
+      radcheckInserts.push({
+        tenantId,
+        username: u.username,
+        attribute: "Cleartext-Password",
+        op: ":=",
+        value: u.password
+      });
+
+      // 2. Expiration
+      if (u.expiration) {
+        radcheckInserts.push({
+          tenantId,
+          username: u.username,
+          attribute: "Expiration",
+          op: ":=",
+          value: u.expiration
+        });
+      }
+
+      // 3. Personal Info (userinfo)
+      userInfoInserts.push({
+        tenantId,
+        username: u.username,
+        firstName: u.firstName || null,
+        lastName: u.lastName || null,
+        memberId: u.memberId || null,
+        citizenId: u.citizenId || null,
+        email: u.email || null,
+        phone: u.phone || null
+      });
+
+      // 4. Group & Profile
+      let finalProfileName = "Default";
+      if (u.groupId) {
+        const group = groupMap.get(u.groupId);
+        if (group) {
+          userOrgInserts.push({
+            tenantId,
+            username: u.username,
+            organizationId: u.groupId
+          });
+          if (group.defaultProfile) {
+            finalProfileName = group.defaultProfile;
+          }
+        }
+      }
+
+      radusergroupInserts.push({
+        tenantId,
+        username: u.username,
+        groupname: finalProfileName,
+        priority: 1
+      });
+    }
+
+    if (radcheckInserts.length > 0) {
+      for (const chunk of chunkArray(radcheckInserts, 500)) await db.insert(radcheck).values(chunk);
+    }
+    
+    if (userInfoInserts.length > 0) {
+      for (const chunk of chunkArray(userInfoInserts, 500)) await db.insert(userinfo).values(chunk);
+    }
+    
+    if (userOrgInserts.length > 0) {
+      for (const chunk of chunkArray(userOrgInserts, 500)) await db.insert(userOrganizations).values(chunk);
+    }
+    
+    if (radusergroupInserts.length > 0) {
+      for (const chunk of chunkArray(radusergroupInserts, 500)) await db.insert(radusergroup).values(chunk);
+    }
+
+    return reply.send({ success: true, count: users.length, message: `Successfully imported ${users.length} users` });
+  } catch (error: any) {
+    request.log.error(error);
+    return reply.code(500).send({ error: "Failed to bulk import users" });
   }
 };

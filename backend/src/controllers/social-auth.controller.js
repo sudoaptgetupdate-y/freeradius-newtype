@@ -3,6 +3,8 @@ import { eq, and } from "drizzle-orm";
 import { tenants } from "../schema/tenants";
 import { tenantPortalSettings } from "../schema/portal";
 import { globalSettings } from "../schema/settings";
+import { userinfo } from "../schema/userinfo";
+import { userOrganizations } from "../schema/organizations";
 import { radcheck, radusergroup, radreply } from "../schema/freeradius";
 import axios from "axios";
 // Helper to get OAuth Config
@@ -142,9 +144,20 @@ export const socialLoginCallback = async (request, reply) => {
             await tx.insert(radusergroup).values({
                 tenantId, username, groupname: tenant.defaultRegisterProfile, priority: 1,
             });
-            if (name) {
-                await tx.insert(radreply).values({
-                    tenantId, username, attribute: "User-Full-Name", op: "=", value: name
+            // Store in userinfo
+            await tx.insert(userinfo).values({
+                tenantId,
+                username,
+                firstName: name || "Social User",
+                lastName: "",
+                email: email || null,
+            });
+            // Bind to default group if configured
+            if (settings && settings.defaultRegisterGroupId) {
+                await tx.insert(userOrganizations).values({
+                    tenantId,
+                    username,
+                    organizationId: settings.defaultRegisterGroupId,
                 });
             }
         });

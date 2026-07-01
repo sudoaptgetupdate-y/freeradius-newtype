@@ -13,5 +13,6 @@ export const tenants = pgTable("tenants", {
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     deletedAt: timestamp("deleted_at"),
+    trashRetentionDays: integer("trash_retention_days").notNull().default(30),
 });
 //# sourceMappingURL=tenants.js.map

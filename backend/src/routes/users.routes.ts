@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { getUsers, createUser, updateUser, deleteUser, getUserDetails, restoreUser, permanentDeleteUser } from "../controllers/users.controller";
-import { bulkDisableUsers, bulkEnableUsers, bulkDeleteUsers, bulkTransferUsers } from "../controllers/users.bulk.controller";
+import { bulkDisableUsers, bulkEnableUsers, bulkDeleteUsers, bulkTransferUsers, bulkImportUsers } from "../controllers/users.bulk.controller";
 
 export const usersRoutes = async (fastify: FastifyInstance) => {
   fastify.addHook("onRequest", fastify.authenticate);
@@ -74,4 +74,26 @@ export const usersRoutes = async (fastify: FastifyInstance) => {
       body: z.object({ usernames: z.array(z.string()), targetGroupId: z.string().uuid() })
     }
   }, bulkTransferUsers);
+
+  fastify.post("/bulk-import", {
+    preValidation: [fastify.authenticate, fastify.requireTenantAdmin],
+    schema: {
+      tags: ["Users"],
+      description: "Bulk import users via CSV payload",
+      body: z.object({
+        users: z.array(z.object({
+          username: z.string(),
+          password: z.string(),
+          firstName: z.string().optional(),
+          lastName: z.string().optional(),
+          memberId: z.string().optional(),
+          citizenId: z.string().optional(),
+          email: z.string().optional(),
+          phone: z.string().optional(),
+          expiration: z.string().optional(),
+          groupId: z.string().uuid().optional(),
+        }))
+      })
+    }
+  }, bulkImportUsers);
 };

@@ -7,4 +7,5 @@ export * from "./vouchers";
 export * from "./organizations";
 export * from "./settings";
 export * from "./portal";
+export * from "./userinfo";
 //# sourceMappingURL=index.js.map

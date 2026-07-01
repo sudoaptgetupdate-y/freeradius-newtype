@@ -1,15 +1,23 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db";
-import { radcheck, radacct, radusergroup } from "../schema/freeradius";
+import { radcheck, radacct, radusergroup, radreply } from "../schema/freeradius";
 import { eq, and, isNull, isNotNull, not, sql, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { organizations, userOrganizations } from "../schema/organizations";
 import { nas } from "../schema/nas";
+import { userinfo } from "../schema/userinfo";
 
 const userSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(4),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  memberId: z.string().min(1),
+  citizenId: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  expiration: z.string().optional(),
   profileName: z.string().min(1).optional(),
   groupId: z.string().uuid().optional(),
   tenantId: z.string().optional(),
@@ -17,6 +25,13 @@ const userSchema = z.object({
 
 const userUpdateSchema = z.object({
   password: z.string().min(4).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  memberId: z.string().min(1).optional(),
+  citizenId: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  expiration: z.string().optional(),
   profileName: z.string().min(1).optional(),
   groupId: z.string().uuid().optional().nullable(),
 });
@@ -199,6 +214,29 @@ export const createUser = async (request: FastifyRequest, reply: FastifyReply) =
       value: data.password
     });
 
+    // Insert additional attributes into userinfo
+    await db.insert(userinfo).values({
+      tenantId: targetTenantId,
+      username: data.username,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      memberId: data.memberId,
+      citizenId: data.citizenId || null,
+      email: data.email || null,
+      phone: data.phone || null,
+    });
+
+    // Insert Expiration if provided
+    if (data.expiration) {
+      await db.insert(radcheck).values({
+        tenantId: targetTenantId,
+        username: data.username,
+        attribute: "Expiration",
+        op: ":=",
+        value: data.expiration
+      });
+    }
+
     // Resolve Profile from Group if provided
     let finalProfileName = data.profileName;
     let shouldSuspendNewUser = false;
@@ -302,6 +340,59 @@ export const updateUser = async (request: FastifyRequest, reply: FastifyReply) =
       await db.update(radcheck).set({ value: data.password }).where(
         and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username), eq(radcheck.attribute, "Cleartext-Password"))
       );
+    }
+
+    // Update personal information in userinfo
+    const userInfoUpdate: any = {};
+    if (data.firstName !== undefined) userInfoUpdate.firstName = data.firstName;
+    if (data.lastName !== undefined) userInfoUpdate.lastName = data.lastName;
+    if (data.memberId !== undefined) userInfoUpdate.memberId = data.memberId;
+    if (data.citizenId !== undefined) userInfoUpdate.citizenId = data.citizenId || null;
+    if (data.email !== undefined) userInfoUpdate.email = data.email || null;
+    if (data.phone !== undefined) userInfoUpdate.phone = data.phone || null;
+
+    if (Object.keys(userInfoUpdate).length > 0) {
+      const existingInfo = await db.select().from(userinfo).where(
+        and(eq(userinfo.tenantId, targetTenantId), eq(userinfo.username, username))
+      ).limit(1);
+
+      if (existingInfo.length > 0) {
+        userInfoUpdate.updatedAt = new Date();
+        await db.update(userinfo).set(userInfoUpdate).where(
+          and(eq(userinfo.tenantId, targetTenantId), eq(userinfo.username, username))
+        );
+      } else {
+        await db.insert(userinfo).values({
+          tenantId: targetTenantId,
+          username: username,
+          ...userInfoUpdate
+        });
+      }
+    }
+
+    if (data.expiration !== undefined) {
+      if (data.expiration === "") {
+        await db.delete(radcheck).where(
+          and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username), eq(radcheck.attribute, "Expiration"))
+        );
+      } else {
+        const existingExp = await db.select().from(radcheck).where(
+          and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username), eq(radcheck.attribute, "Expiration"))
+        ).limit(1);
+        if (existingExp.length > 0) {
+          await db.update(radcheck).set({ value: data.expiration }).where(
+            and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username), eq(radcheck.attribute, "Expiration"))
+          );
+        } else {
+          await db.insert(radcheck).values({
+            tenantId: targetTenantId,
+            username: username,
+            attribute: "Expiration",
+            op: ":=",
+            value: data.expiration
+          });
+        }
+      }
     }
 
     if (data.profileName) {
@@ -515,6 +606,33 @@ export const getUserDetails = async (request: FastifyRequest, reply: FastifyRepl
       .limit(1);
     const profileName = profileRes.length > 0 ? profileRes[0]?.groupname : "Default";
 
+    // Get extra user details from userinfo and radcheck
+    const userInfoRes = await db
+      .select()
+      .from(userinfo)
+      .where(and(eq(userinfo.username, username), eq(userinfo.tenantId, targetTenantId)))
+      .limit(1);
+    
+    const uInfo: any = userInfoRes[0] || {};
+      
+    const checkAttrs = await db
+      .select({ attribute: radcheck.attribute, value: radcheck.value })
+      .from(radcheck)
+      .where(and(eq(radcheck.username, username), eq(radcheck.tenantId, targetTenantId)));
+
+    const personalInfo: any = {
+      firstName: uInfo.firstName || "",
+      lastName: uInfo.lastName || "",
+      memberId: uInfo.memberId || "",
+      citizenId: uInfo.citizenId || "",
+      email: uInfo.email || "",
+      phone: uInfo.phone || ""
+    };
+    
+    checkAttrs.forEach(attr => {
+      if (attr.attribute === "Expiration") personalInfo.expiration = attr.value;
+    });
+
     // Get active session
     const activeSessionRes = await db
       .select()
@@ -564,6 +682,7 @@ export const getUserDetails = async (request: FastifyRequest, reply: FastifyRepl
       username,
       profileName,
       activeSession,
+      personalInfo,
       stats: {
         totalBytes: String(stats.totalBytes || 0),
         totalDuration: Number(stats.totalDuration || 0),

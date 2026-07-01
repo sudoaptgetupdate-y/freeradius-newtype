@@ -125,6 +125,23 @@ export declare const tenantPortalSettings: import("drizzle-orm/pg-core").PgTable
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        defaultRegisterGroupId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "default_register_group_id";
+            tableName: "tenant_portal_settings";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         themeColor: import("drizzle-orm/pg-core").PgColumn<{
             name: "theme_color";
             tableName: "tenant_portal_settings";

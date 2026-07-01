@@ -19,6 +19,7 @@ export declare const updateSettingsSchema: z.ZodObject<{
     lineChannelSecretOverride: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     telegramEnabled: z.ZodOptional<z.ZodBoolean>;
     telegramChatId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    trashRetentionDays: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
 }, z.core.$strip>;
 export declare const registerUserSchema: z.ZodObject<{
     username: z.ZodString;

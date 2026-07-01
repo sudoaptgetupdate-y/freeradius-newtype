@@ -5,4 +5,7 @@ export declare const updateGroup: (request: FastifyRequest, reply: FastifyReply)
 export declare const deleteGroup: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 export declare const bulkDisableGroupUsers: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 export declare const bulkDeleteGroupUsers: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
+export declare const bulkEnableGroupUsers: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
+export declare const getGroupMembers: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
+export declare const bulkTransferGroupUsers: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 //# sourceMappingURL=groups.controller.d.ts.map

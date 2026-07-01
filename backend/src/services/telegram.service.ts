@@ -7,6 +7,9 @@ import { nas } from '../schema/nas';
 import { eq, and, isNull, like, or, inArray } from 'drizzle-orm';
 import { organizations, userOrganizations } from '../schema/organizations';
 import { RadiusCoAService } from './radius-coa.service';
+import { vouchers } from '../schema/vouchers';
+import { voucherQueue } from '../lib/queue';
+import { userinfo } from '../schema/userinfo';
 
 export class TelegramService {
   private static instance: TelegramService;
@@ -28,13 +31,28 @@ export class TelegramService {
     this.isInitialized = true;
   }
 
-  public async processUpdate(update: any) {
-    if (!this.bot || !this.isInitialized) return;
+  private async ensureInitialized(): Promise<boolean> {
+    if (this.isInitialized && this.bot) return true;
+    const settings = await db.query.globalSettings.findFirst();
+    if (settings && settings.telegramToken) {
+      await this.initBot(settings.telegramToken);
+      return true;
+    }
+    return false;
+  }
 
-    if (update.message) {
-      await this.handleMessage(update.message);
-    } else if (update.callback_query) {
-      await this.handleCallbackQuery(update.callback_query);
+  public async processUpdate(update: any) {
+    try {
+      await this.ensureInitialized();
+      if (!this.bot || !this.isInitialized) return;
+
+      if (update.message) {
+        await this.handleMessage(update.message);
+      } else if (update.callback_query) {
+        await this.handleCallbackQuery(update.callback_query);
+      }
+    } catch (error) {
+      console.error("Error in Telegram processUpdate:", error);
     }
   }
 
@@ -44,24 +62,40 @@ export class TelegramService {
     const text = msg.text.trim();
     const chatId = msg.chat.id;
 
+    // Split command and arguments
+    const parts = text.split(/\s+/);
+    const commandWithBot = parts[0]?.toLowerCase() || "";
+    // Remove @botname suffix if present (e.g. /status@botname -> /status)
+    const command = commandWithBot.split('@')[0];
+    const args = parts.slice(1);
+
+    // Allow /start, /chatid, or /myid for anyone so they can find their chat ID easily
+    if (command === '/start' || command === '/chatid' || command === '/myid') {
+      await this.ensureInitialized();
+      this.bot?.sendMessage(chatId, `ℹ️ *Your Chat ID:* \`${chatId}\`\n\nCopy this ID and save it in your Tenant Portal Settings or Global Settings to authorize this chat.`, { parse_mode: 'Markdown' });
+      return;
+    }
+
     // Check if the chat is authorized (matches a tenant or master admin)
     const authInfo = await this.getChatAuthorization(chatId.toString());
     if (!authInfo.isAuthorized) {
       return; // Ignore unauthorized chats silently to avoid spam
     }
 
-    if (text.startsWith('/status')) {
+    if (command === '/status') {
       await this.handleStatusCommand(chatId, authInfo);
-    } else if (text.startsWith('/user ')) {
-      await this.handleUserCommand(chatId, text.split(' ')[1], authInfo);
-    } else if (text.startsWith('/find ')) {
-      const query = text.substring(6).trim();
+    } else if (command === '/user') {
+      const username = args[0] || "";
+      await this.handleUserCommand(chatId, username, authInfo);
+    } else if (command === '/find') {
+      const query = args.join(' ');
       await this.handleFindCommand(chatId, query, authInfo);
-    } else if (text.startsWith('/group ')) {
-      await this.handleGroupCommand(chatId, text.split(' ')[1], authInfo);
-    } else if (text.startsWith('/voucher ')) {
-      await this.handleVoucherCommand(chatId, text, authInfo);
-    } else if (text === '/help') {
+    } else if (command === '/group') {
+      const groupName = args.join(' ');
+      await this.handleGroupCommand(chatId, groupName, authInfo);
+    } else if (command === '/voucher') {
+      await this.handleVoucherCommand(chatId, args, authInfo);
+    } else if (command === '/help') {
       await this.handleHelpCommand(chatId);
     }
   }
@@ -174,22 +208,42 @@ export class TelegramService {
       return;
     }
 
-    // Search radcheck
-    const results = await db.select().from(radcheck).where(
+    // Get matching usernames from userinfo (first name, last name, phone, email, username)
+    const userinfoMatches = await db.select({ username: userinfo.username }).from(userinfo).where(
+      and(
+        or(
+          like(userinfo.username, `%${query}%`),
+          like(userinfo.firstName, `%${query}%`),
+          like(userinfo.lastName, `%${query}%`),
+          like(userinfo.phone, `%${query}%`),
+          like(userinfo.email, `%${query}%`)
+        ),
+        auth.tenantId ? eq(userinfo.tenantId, auth.tenantId) : undefined
+      )
+    ).limit(20);
+
+    // Also search radcheck directly in case there is no userinfo entry
+    const radcheckMatches = await db.select({ username: radcheck.username }).from(radcheck).where(
       and(
         like(radcheck.username, `%${query}%`),
         auth.tenantId ? eq(radcheck.tenantId, auth.tenantId) : undefined
       )
-    ).limit(10);
+    ).limit(20);
 
-    if (results.length === 0) {
+    // Combine and get unique usernames
+    const uniqueUsernames = Array.from(new Set([
+      ...userinfoMatches.map(u => u.username),
+      ...radcheckMatches.map(r => r.username)
+    ])).slice(0, 10);
+
+    if (uniqueUsernames.length === 0) {
       this.bot?.sendMessage(chatId, "❌ ไม่พบผู้ใช้งานที่ตรงกับคำค้นหา");
       return;
     }
 
-    const inlineKeyboard = results.map(r => [{
-      text: `👤 ${r.username}`,
-      callback_data: `user:${r.username}`
+    const inlineKeyboard = uniqueUsernames.map(username => [{
+      text: `👤 ${username}`,
+      callback_data: `user:${username}`
     }]);
 
     this.bot?.sendMessage(chatId, "🔍 *ผลการค้นหา:*", {
@@ -331,8 +385,127 @@ export class TelegramService {
     });
   }
 
-  private async handleVoucherCommand(chatId: number, commandText: string, auth: { tenantId: string | null }) {
-    this.bot?.sendMessage(chatId, "⏳ ระบบกำลังทยอยพัฒนาส่วนสร้างคูปองผ่าน Telegram ครับ...");
+  private async handleVoucherCommand(chatId: number, args: string[], auth: { tenantId: string | null }) {
+    const effectiveTenantId = auth.tenantId;
+    if (!effectiveTenantId) {
+      this.bot?.sendMessage(chatId, "❌ คำสั่งนี้ใช้ได้สำหรับบัญชี Tenant Admin เท่านั้น");
+      return;
+    }
+
+    // 1. Fetch available profiles for validation and suggestion
+    let uniqueProfiles: string[] = [];
+    try {
+      const checkRows = await db.select({ groupname: radgroupcheck.groupname }).from(radgroupcheck).where(
+        eq(radgroupcheck.tenantId, effectiveTenantId)
+      );
+      const replyRows = await db.select({ groupname: radgroupreply.groupname }).from(radgroupreply).where(
+        eq(radgroupreply.tenantId, effectiveTenantId)
+      );
+      uniqueProfiles = Array.from(new Set([
+        ...checkRows.map(r => r.groupname),
+        ...replyRows.map(r => r.groupname)
+      ]));
+    } catch (e) {
+      console.error("Failed to fetch profiles for tenant", e);
+    }
+
+    const showUsageHelp = () => {
+      let helpText = `ℹ️ *รูปแบบคำสั่ง:* \`/voucher <จำนวนคูปอง> <ชื่อแพ็กเกจ>\`\n`;
+      helpText += `ตัวอย่าง: \`/voucher 5 Basic_WiFi\`\n\n`;
+      if (uniqueProfiles.length > 0) {
+        helpText += `📋 *แพ็กเกจที่ใช้งานได้ในระบบของคุณ:*\n`;
+        uniqueProfiles.forEach(p => {
+          helpText += `- \`${p}\`\n`;
+        });
+      } else {
+        helpText += `⚠️ ไม่พบข้อมูลแพ็กเกจในระบบของคุณ กรุณาสร้างแพ็กเกจก่อน`;
+      }
+      this.bot?.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
+    };
+
+    if (args.length < 2) {
+      showUsageHelp();
+      return;
+    }
+
+    const countStr = args[0] || "";
+    const packageName = args[1] || "";
+
+    const count = parseInt(countStr, 10);
+    if (isNaN(count) || count <= 0) {
+      this.bot?.sendMessage(chatId, "❌ จำนวนคูปองต้องเป็นตัวเลขที่มากกว่า 0");
+      return;
+    }
+
+    if (count > 100) {
+      this.bot?.sendMessage(chatId, "❌ อนุญาตให้สร้างได้ไม่เกิน 100 ใบต่อครั้งผ่าน Telegram");
+      return;
+    }
+
+    if (!uniqueProfiles.includes(packageName)) {
+      this.bot?.sendMessage(chatId, `❌ ไม่พบแพ็กเกจชื่อ \`${packageName}\` ในระบบของคุณ`);
+      showUsageHelp();
+      return;
+    }
+
+    this.bot?.sendMessage(chatId, `⏳ กำลังสร้างคูปองจำนวน ${count} ใบ สำหรับแพ็กเกจ \`${packageName}\` กรุณารอสักครู่...`, { parse_mode: 'Markdown' });
+
+    try {
+      const job = await voucherQueue.add("generate_vouchers", {
+        tenantId: effectiveTenantId,
+        amount: count,
+        groupname: packageName,
+        type: "code",
+        codeLength: 6
+      });
+
+      // Poll for job completion
+      let attempts = 0;
+      let completed = false;
+      let jobResult: any = null;
+
+      while (attempts < 20) { // max 10 seconds (20 * 500ms)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const state = await job.getState();
+        if (state === 'completed') {
+          jobResult = job.returnvalue;
+          completed = true;
+          break;
+        } else if (state === 'failed') {
+          break;
+        }
+        attempts++;
+      }
+
+      if (completed && jobResult && jobResult.batchId) {
+        // Fetch vouchers from db
+        const generatedVouchers = await db.select().from(vouchers).where(
+          eq(vouchers.batchId, jobResult.batchId)
+        );
+
+        let responseText = `✅ *สร้างคูปองสำเร็จ!* จำนวน ${generatedVouchers.length} ใบ\n`;
+        responseText += `📦 *แพ็กเกจ:* \`${packageName}\`\n`;
+        responseText += `--------------------------------------\n`;
+
+        const displayCount = Math.min(generatedVouchers.length, 15);
+        for (let i = 0; i < displayCount; i++) {
+          const v = generatedVouchers[i]!;
+          responseText += `• Code: \`${v.code}\` ${v.password ? `| Pass: \`${v.password}\`` : ""}\n`;
+        }
+
+        if (generatedVouchers.length > 15) {
+          responseText += `--------------------------------------\n`;
+          responseText += `*และอีก ${generatedVouchers.length - 15} ใบที่เหลือ* สามารถเข้าดูและพิมพ์คูปองทั้งหมดได้ทาง Web Portal`;
+        }
+
+        this.bot?.sendMessage(chatId, responseText, { parse_mode: 'Markdown' });
+      } else {
+        this.bot?.sendMessage(chatId, `❌ ใช้เวลานานเกินไปในการสร้างคูปองในคิว กรุณาตรวจสอบผลการสร้างที่ระบบหลังบ้าน/Web Portal`);
+      }
+    } catch (error: any) {
+      console.error("Voucher generation via telegram failed:", error);
+      this.bot?.sendMessage(chatId, `❌ เกิดข้อผิดพลาดในการสร้างคูปอง: ${error.message || error}`);
+    }
   }
 
   // --- Callbacks ---
@@ -468,6 +641,7 @@ export class TelegramService {
   // --- External Alert Dispatchers ---
 
   public async sendMasterAlert(message: string) {
+    await this.ensureInitialized();
     if (!this.bot || !this.isInitialized) return;
     const settings = await db.query.globalSettings.findFirst();
     if (settings && settings.telegramEnabled && settings.telegramChatId) {
@@ -480,6 +654,7 @@ export class TelegramService {
   }
 
   public async sendDirectMessage(chatId: string, message: string) {
+    await this.ensureInitialized();
     if (!this.bot || !this.isInitialized) {
       throw new Error("Telegram bot is not initialized. Please check Global Settings.");
     }
@@ -487,6 +662,7 @@ export class TelegramService {
   }
 
   public async sendAlertToTenant(tenantId: string, message: string, inlineKeyboard?: any[][]) {
+    await this.ensureInitialized();
     if (!this.bot || !this.isInitialized) return;
     const tenant = await db.query.tenants.findFirst({ where: eq(tenants.id, tenantId) });
     if (tenant && tenant.telegramEnabled && tenant.telegramChatId) {

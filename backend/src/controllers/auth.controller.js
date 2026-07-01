@@ -8,6 +8,13 @@ export const login = async (request, reply) => {
     try {
         const input = request.body;
         const user = await authService.login(input);
+        // Record Last Login Time and IP
+        await db.update(admins)
+            .set({
+            lastLoginAt: new Date(),
+            lastLoginIp: request.ip
+        })
+            .where(eq(admins.id, user.id));
         // Generate JWT
         const token = await reply.jwtSign(user);
         // Set HttpOnly Cookie (Security Best Practice)
