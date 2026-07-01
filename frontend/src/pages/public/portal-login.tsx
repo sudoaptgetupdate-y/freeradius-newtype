@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Card, CardContent, CardDescription, CardFooter, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardDescription, CardTitle } from "@/components/ui/card"
 import { toast } from "react-toastify"
-import { Loader2 } from "lucide-react"
+import { Loader2, LogIn } from "lucide-react"
 import api from "@/lib/api"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageToggle } from "@/components/language-toggle"
 import { PortalLayout } from "@/layouts/portal-layout"
 
 export default function PortalLoginPage() {

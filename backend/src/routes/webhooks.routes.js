@@ -1,3 +1,4 @@
+import { handleTelegramWebhook } from "../controllers/webhooks.controller";
 export default async function webhooksRoutes(app) {
     app.post("/pms", async (request, reply) => {
         // TODO: Implement PMS Webhook Integration
@@ -7,5 +8,6 @@ export default async function webhooksRoutes(app) {
         // TODO: Implement Payment Gateway Webhook (PromptPay/Stripe)
         return reply.send({ message: "Payment webhook received" });
     });
+    app.post("/telegram/:token", handleTelegramWebhook);
 }
 //# sourceMappingURL=webhooks.routes.js.map

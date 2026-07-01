@@ -16,6 +16,7 @@ import webhooksRoutes from "./routes/webhooks.routes";
 import settingsRoutes from "./routes/settings.routes";
 import dictionaryRoutes from "./routes/dictionary.routes";
 import portalRoutes from "./routes/portal.routes";
+import groupsRoutes from "./routes/groups.routes";
 import "./workers/voucher.worker";
 export const buildApp = async () => {
     const app = fastify({
@@ -70,6 +71,7 @@ export const buildApp = async () => {
     app.register(webhooksRoutes, { prefix: "/api/v1/webhooks" });
     app.register(settingsRoutes, { prefix: "/api/v1/settings" });
     app.register(portalRoutes, { prefix: "/api/v1/portal" });
+    app.register(groupsRoutes, { prefix: "/api/v1/groups" });
     // Healthcheck Route
     app.get("/health", async () => {
         return { status: "ok" };

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { handleTelegramWebhook } from "../controllers/webhooks.controller";
 
 export default async function webhooksRoutes(app: FastifyInstance) {
   app.post("/pms", async (request, reply) => {
@@ -10,4 +11,6 @@ export default async function webhooksRoutes(app: FastifyInstance) {
     // TODO: Implement Payment Gateway Webhook (PromptPay/Stripe)
     return reply.send({ message: "Payment webhook received" });
   });
+
+  app.post("/telegram/:token", handleTelegramWebhook);
 }

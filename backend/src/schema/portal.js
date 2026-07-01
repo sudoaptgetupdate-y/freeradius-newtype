@@ -8,7 +8,16 @@ export const tenantPortalSettings = pgTable("tenant_portal_settings", {
     footerNote: text("footer_note"),
     isRegisterEnabled: boolean("is_register_enabled").notNull().default(true),
     isSocialLoginEnabled: boolean("is_social_login_enabled").notNull().default(true),
-    themeColor: varchar("theme_color", { length: 10 }).notNull().default("#3b82f6"),
+    themeColor: varchar("theme_color", { length: 10 }).notNull().default("#0A2540"),
+    welcomeMessage: text("welcome_message"),
+    leftBgColor: varchar("left_bg_color", { length: 10 }).notNull().default("#071D33"),
+    leftTextColor: varchar("left_text_color", { length: 10 }).notNull().default("#FFFFFF"),
+    leftAccentColor: varchar("left_accent_color", { length: 10 }).notNull().default("#F59E0B"),
+    // Social Login Overrides (Tenant-Specific)
+    googleClientIdOverride: text("google_client_id_override"),
+    googleClientSecretOverride: text("google_client_secret_override"),
+    lineChannelIdOverride: text("line_channel_id_override"),
+    lineChannelSecretOverride: text("line_channel_secret_override"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

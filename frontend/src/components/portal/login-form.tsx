@@ -1,9 +1,7 @@
 import { useState } from "react"
-import { useSearchParams, useNavigate } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { toast } from "react-toastify"
-import api from "@/lib/api"
-
 interface LoginFormProps {
   tenantId: string
   settings: any
@@ -11,7 +9,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ tenantId, settings, onRegisterClick }: LoginFormProps) {
-  const navigate = useNavigate()
+
   const [searchParams] = useSearchParams()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")

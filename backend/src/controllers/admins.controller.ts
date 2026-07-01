@@ -100,7 +100,7 @@ export const updateAdmin = async (request: FastifyRequest, reply: FastifyReply) 
 
     // Auth checks
     if (user.role !== "super_admin") {
-      if (targetAdmin[0].tenantId !== user.tenantId || data.tenantId !== user.tenantId) {
+      if (targetAdmin[0]!.tenantId !== user.tenantId || data.tenantId !== user.tenantId) {
         return reply.status(403).send({ error: "Forbidden" });
       }
       if (data.role === "super_admin" || data.role === "master_staff") {
@@ -151,7 +151,7 @@ export const deleteAdmin = async (request: FastifyRequest, reply: FastifyReply) 
     }
 
     // Check permissions
-    if (user.role !== "super_admin" && targetAdmin[0].tenantId !== user.tenantId) {
+    if (user.role !== "super_admin" && targetAdmin[0]!.tenantId !== user.tenantId) {
       return reply.status(403).send({ error: "Forbidden" });
     }
 

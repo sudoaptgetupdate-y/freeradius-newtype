@@ -8,6 +8,17 @@ export declare const updateSettingsSchema: z.ZodObject<{
     isRegisterEnabled: z.ZodBoolean;
     isSocialLoginEnabled: z.ZodBoolean;
     themeColor: z.ZodString;
+    welcomeMessage: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    leftBgColor: z.ZodString;
+    leftTextColor: z.ZodString;
+    leftAccentColor: z.ZodString;
+    tenantId: z.ZodOptional<z.ZodString>;
+    googleClientIdOverride: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    googleClientSecretOverride: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    lineChannelIdOverride: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    lineChannelSecretOverride: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    telegramEnabled: z.ZodOptional<z.ZodBoolean>;
+    telegramChatId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
 }, z.core.$strip>;
 export declare const registerUserSchema: z.ZodObject<{
     username: z.ZodString;
@@ -25,6 +36,14 @@ export declare const getPortalSettings: (request: FastifyRequest<{
     };
 }>, reply: FastifyReply) => Promise<never>;
 /**
+ * Protected endpoint to fetch portal settings by tenantId (includes overrides)
+ */
+export declare const getPortalSettingsAdmin: (request: FastifyRequest<{
+    Params: {
+        tenantId: string;
+    };
+}>, reply: FastifyReply) => Promise<never>;
+/**
  * Protected endpoint to update portal settings
  */
 export declare const updatePortalSettings: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
@@ -36,4 +55,8 @@ export declare const registerUser: (request: FastifyRequest<{
         tenantId: string;
     };
 }>, reply: FastifyReply) => Promise<never>;
+/**
+ * Send a test Telegram message to check connection
+ */
+export declare const testTelegramSettings: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 //# sourceMappingURL=portal.controller.d.ts.map

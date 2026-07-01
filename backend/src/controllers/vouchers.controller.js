@@ -15,12 +15,9 @@ export const generateVouchersSchema = z.object({
 export const generateVouchers = async (request, reply) => {
     const user = request.user;
     const body = request.body;
-    let tenantId = user.tenantId;
-    if (user.role === "super_admin" || user.role === "admin") {
-        tenantId = body.tenantId;
-        if (!tenantId) {
-            return reply.code(400).send({ error: "Tenant ID is required for master admins" });
-        }
+    const tenantId = user.tenantId || body.tenantId || null;
+    if (!tenantId) {
+        return reply.code(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
     if (redisConnection.status !== "ready") {
         return reply.code(503).send({ error: "Redis is not connected. Please start your Redis server." });
@@ -48,11 +45,7 @@ export const getJobStatus = async (request, reply) => {
 };
 export const getVoucherBatches = async (request, reply) => {
     const user = request.user;
-    let tenantId = user.tenantId;
-    const query = request.query;
-    if ((user.role === "super_admin" || user.role === "admin") && query.tenantId) {
-        tenantId = query.tenantId;
-    }
+    const tenantId = user.tenantId ?? null;
     const batches = await db.query.voucherBatches.findMany({
         where: tenantId ? eq(voucherBatches.tenantId, tenantId) : undefined,
         orderBy: [desc(voucherBatches.createdAt)],
@@ -72,11 +65,7 @@ export const getVouchers = async (request, reply) => {
 };
 export const getVoucherSettings = async (request, reply) => {
     const user = request.user;
-    let tenantId = user.tenantId;
-    const query = request.query;
-    if ((user.role === "super_admin" || user.role === "admin") && query.tenantId) {
-        tenantId = query.tenantId;
-    }
+    const tenantId = user.tenantId || request.query.tenantId || null;
     if (!tenantId) {
         return reply.code(400).send({ error: "Tenant ID is required" });
     }
@@ -107,12 +96,9 @@ export const updateVoucherSettingsSchema = z.object({
 export const updateVoucherSettings = async (request, reply) => {
     const user = request.user;
     const body = request.body;
-    let tenantId = user.tenantId;
-    if (user.role === "super_admin" || user.role === "admin") {
-        tenantId = body.tenantId || tenantId;
-    }
+    const tenantId = user.tenantId || body.tenantId || null;
     if (!tenantId) {
-        return reply.code(400).send({ error: "Tenant ID is required" });
+        return reply.code(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
     }
     const [settings] = await db.insert(voucherSettings).values({
         tenantId,

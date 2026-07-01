@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import { Users, Server, Activity, ArrowUpRight, Ticket, CheckCircle2, AlertTriangle, Zap, UserX, CalendarIcon, Download } from "lucide-react"
+import { Users, Server, Activity, ArrowUpRight, Ticket, CheckCircle2, AlertTriangle, Zap, UserX, CalendarIcon, Download, Layers } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { NetworkTrafficChart } from "@/components/network-traffic-chart"
@@ -348,6 +348,65 @@ function TenantDashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4 mt-6">
+        <Card className="col-span-1 md:col-span-3 lg:col-span-4 border-none shadow-md">
+          <CardHeader className="px-6 py-5 border-b border-border/50">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Layers className="h-5 w-5 text-primary" />
+              Group Analytics Overview
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Monitor active sessions and bandwidth utilization across your organizational groups.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Top Groups by Active Sessions</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="text-sm font-medium">Grade 10</span>
+                    </div>
+                    <span className="text-sm font-semibold">42</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                      <span className="text-sm font-medium">Staff</span>
+                    </div>
+                    <span className="text-sm font-semibold">15</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+                      <span className="text-sm font-medium">Grade 11</span>
+                    </div>
+                    <span className="text-sm font-semibold">8</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 sm:col-span-2">
+                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Bandwidth Utilization (Mock)</h4>
+                 <div className="h-[120px] bg-muted/20 rounded-lg border border-border/50 flex items-center justify-center">
+                    <span className="text-muted-foreground text-sm flex items-center gap-2">
+                      <Activity className="h-4 w-4" /> Bar Chart Placeholder for Group Traffic
+                    </span>
+                 </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-border/50 text-center sm:text-left">
+              <Button variant="link" className="text-primary p-0 h-auto font-medium" onClick={() => window.location.href = '/groups'}>
+                Manage all groups &rarr;
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

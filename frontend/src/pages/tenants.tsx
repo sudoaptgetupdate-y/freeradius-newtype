@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Plus, Edit, Building2, Loader2, Mail, Key, Users, Power, PowerOff, Server, LogIn } from "lucide-react"
+import { Search, Plus, Edit, Building2, Loader2, Mail, Key, Users, Power, PowerOff, Server, LogIn, MessageSquare } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import { useNavigate } from "react-router-dom"
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   Select,
@@ -70,7 +71,9 @@ export default function TenantsPage() {
     primaryDeviceType: "mikrotik",
     defaultRegisterProfile: "",
     adminEmail: "",
-    adminPassword: ""
+    adminPassword: "",
+    telegramChatId: "",
+    telegramEnabled: false
   })
 
   const fetchTenants = async () => {
@@ -125,7 +128,7 @@ export default function TenantsPage() {
         await api.post("/tenants", formData)
       }
       setIsDialogOpen(false)
-      setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", primaryDeviceType: "mikrotik", defaultRegisterProfile: "", adminEmail: "", adminPassword: "" })
+      setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", primaryDeviceType: "mikrotik", defaultRegisterProfile: "", adminEmail: "", adminPassword: "", telegramChatId: "", telegramEnabled: false })
       setEditingTenantId(null)
       toast.success(editingTenantId ? "Tenant updated successfully!" : "Tenant created successfully!")
       fetchTenants()
@@ -139,11 +142,11 @@ export default function TenantsPage() {
 
   const handleOpenCreate = () => {
     setEditingTenantId(null)
-    setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", primaryDeviceType: "mikrotik", defaultRegisterProfile: "none", adminEmail: "", adminPassword: "" })
+    setFormData({ name: "", maxUsers: 100, maxNas: 1, status: "active", primaryDeviceType: "mikrotik", defaultRegisterProfile: "none", adminEmail: "", adminPassword: "", telegramChatId: "", telegramEnabled: false })
     setIsDialogOpen(true)
   }
 
-  const handleOpenEdit = (tenant: TenantData) => {
+  const handleOpenEdit = (tenant: any) => {
     setEditingTenantId(tenant.id)
     setOriginalDeviceType(tenant.primaryDeviceType)
     setFormData({
@@ -154,7 +157,9 @@ export default function TenantsPage() {
       primaryDeviceType: tenant.primaryDeviceType || "mikrotik",
       defaultRegisterProfile: tenant.defaultRegisterProfile || "none",
       adminEmail: "", // Not used in edit mode
-      adminPassword: "" // Not used in edit mode
+      adminPassword: "", // Not used in edit mode
+      telegramChatId: tenant.telegramChatId || "",
+      telegramEnabled: tenant.telegramEnabled || false
     })
     setIsDialogOpen(true)
   }
@@ -439,8 +444,37 @@ export default function TenantsPage() {
                     </div>
                   </div>
                 )}
+                
+                <div className="space-y-4 pt-4 border-t border-border mt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-[14px] font-semibold text-foreground">Telegram Notifications</Label>
+                      <p className="text-[12px] text-muted-foreground">Enable bot commands and alerts for this tenant.</p>
+                    </div>
+                    <Switch 
+                      checked={formData.telegramEnabled} 
+                      onCheckedChange={c => setFormData({...formData, telegramEnabled: c})} 
+                    />
+                  </div>
+                  {formData.telegramEnabled && (
+                    <div className="space-y-1.5 mt-2">
+                      <Label htmlFor="telegramChatId" className="text-[14px] font-semibold text-foreground">
+                        Telegram Group Chat ID
+                      </Label>
+                      <div className="relative">
+                        <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          id="telegramChatId" 
+                          value={formData.telegramChatId} 
+                          onChange={e => setFormData({...formData, telegramChatId: e.target.value})} 
+                          placeholder="-100123456789" 
+                          className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-
               {!editingTenantId && (
                 <div className="space-y-4">
                   <div className="h-[1px] bg-border w-full" />

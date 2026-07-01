@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Filter, MoreHorizontal, Plus, Edit, Trash2, LogOut, Loader2, User, Key, Package, Building, Eye, Calendar, Clock, Database, Laptop } from "lucide-react"
+import { Search, Filter, MoreHorizontal, Plus, Edit, Trash2, LogOut, Loader2, User, Key, Building, Eye, Calendar, Clock, Database, Laptop, Layers } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "react-toastify"
 import Swal from "sweetalert2"
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   Table,
@@ -52,7 +54,10 @@ type UserData = {
   dataUsage: string
   status: string
   isOnline: boolean
+  isSuspended?: boolean
   profileName: string
+  groupName?: string
+  groupId?: string
   tenantId?: string
 }
 
@@ -67,18 +72,29 @@ export function UsersPage() {
   const MySwal = withReactContent(Swal)
   const [users, setUsers] = useState<UserData[]>([])
   const [profiles, setProfiles] = useState<ProfileData[]>([])
+  const [groups, setGroups] = useState<{id: string, name: string, tenantId: string}[]>([])
   const [tenants, setTenants] = useState<{id: string, name: string}[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState("all")
   const [selectedTenantFilter, setSelectedTenantFilter] = useState<string>("all")
-
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    profileName: "",
+    groupId: "",
+    tenantId: ""
+  })
+  
+  const [editFormData, setEditFormData] = useState({
+    username: "",
+    password: "",
+    groupId: "",
     tenantId: ""
   })
 
@@ -129,9 +145,9 @@ export function UsersPage() {
     return `${minutes}m ${seconds % 60}s`
   }
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (isTrash: boolean = false) => {
     try {
-      const response = await api.get("/users")
+      const response = await api.get(`/users${isTrash ? "?showDeleted=true" : ""}`)
       setUsers(response.data.users)
     } catch (error) {
       console.error("Failed to fetch users", error)
@@ -144,6 +160,15 @@ export function UsersPage() {
       setProfiles(response.data)
     } catch (error) {
       console.error("Failed to fetch profiles", error)
+    }
+  }
+
+  const fetchGroups = async () => {
+    try {
+      const response = await api.get("/groups")
+      setGroups(response.data)
+    } catch (error) {
+      console.error("Failed to fetch groups", error)
     }
   }
 
@@ -163,10 +188,12 @@ export function UsersPage() {
   }
 
   useEffect(() => {
-    fetchUsers()
+    fetchUsers(statusFilter === "bin")
     fetchProfiles()
+    fetchGroups()
     fetchTenants()
-  }, [user])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, statusFilter])
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,18 +209,53 @@ export function UsersPage() {
       const payload: any = { 
         username: formData.username,
         password: formData.password,
-        profileName: formData.profileName
       }
+      if (formData.groupId && formData.groupId !== "none") payload.groupId = formData.groupId
       if (formData.tenantId) payload.tenantId = formData.tenantId
 
       await api.post("/users", payload)
       setIsDialogOpen(false)
-      setFormData({ username: "", password: "", profileName: "", tenantId: "" })
+      setFormData({ username: "", password: "", groupId: "", tenantId: "" })
       toast.success("User created successfully!")
       fetchUsers()
     } catch (error: any) {
       console.error("Failed to create user:", error)
       toast.error(error.response?.data?.error || "Failed to create user")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOpenEdit = (userObj: UserData) => {
+    setEditFormData({
+      username: userObj.username,
+      password: "",
+      groupId: userObj.groupId || "none",
+      tenantId: userObj.tenantId || ""
+    })
+    setIsEditUserOpen(true)
+  }
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      const payload: any = {}
+      if (editFormData.password) payload.password = editFormData.password
+      
+      if (editFormData.groupId && editFormData.groupId !== "none") {
+         payload.groupId = editFormData.groupId
+      } else if (editFormData.groupId === "none") {
+         payload.groupId = null
+      }
+      
+      await api.put(`/users/${editFormData.username}`, payload)
+      toast.success("User updated successfully!")
+      setIsEditUserOpen(false)
+      fetchUsers()
+    } catch (error: any) {
+      console.error("Failed to update user:", error)
+      toast.error(error.response?.data?.error || "Failed to update user")
     } finally {
       setIsLoading(false)
     }
@@ -219,9 +281,9 @@ export function UsersPage() {
             tenantIdQuery = `?tenantId=${(targetUser as any).tenantId}`
           }
         }
-        await api.delete(`/users/${username}${tenantIdQuery}`)
-        toast.success("User deleted successfully!")
-        fetchUsers()
+        await api.delete(`/users/${username}${statusFilter === 'bin' ? '/permanent' : ''}${tenantIdQuery}`)
+        toast.success(statusFilter === 'bin' ? "User permanently deleted!" : "User moved to trash!")
+        fetchUsers(statusFilter === 'bin')
       } catch (error: any) {
         console.error("Failed to delete user:", error)
         toast.error(error.response?.data?.error || "Failed to delete user")
@@ -229,13 +291,86 @@ export function UsersPage() {
     }
   }
 
+  const handleRestoreUser = async (username: string) => {
+    try {
+      let tenantIdQuery = ""
+      if (user?.role === "super_admin" || user?.role === "admin") {
+        const targetUser = users.find(u => u.username === username)
+        if (targetUser && (targetUser as any).tenantId) {
+          tenantIdQuery = `?tenantId=${(targetUser as any).tenantId}`
+        }
+      }
+      await api.post(`/users/${username}/restore${tenantIdQuery}`)
+      toast.success("User restored successfully!")
+      fetchUsers(statusFilter === 'bin')
+    } catch (error: any) {
+      console.error("Failed to restore user:", error)
+      toast.error(error.response?.data?.error || "Failed to restore user")
+    }
+  }
+
+  const handleBulkAction = async (action: 'suspend' | 'enable' | 'delete' | 'transfer' | 'restore' | 'hard_delete') => {
+    if (selectedUsers.length === 0) return
+    setIsLoading(true)
+    try {
+      if (action === 'restore' || action === 'hard_delete') {
+        // Run individually since no bulk endpoint exists for these yet
+        const promises = selectedUsers.map(username => {
+          let tenantIdQuery = ""
+          if (user?.role === "super_admin" || user?.role === "admin") {
+            const targetUser = users.find(u => u.username === username)
+            if (targetUser && (targetUser as any).tenantId) {
+              tenantIdQuery = `?tenantId=${(targetUser as any).tenantId}`
+            }
+          }
+          if (action === 'restore') return api.post(`/users/${username}/restore${tenantIdQuery}`)
+          return api.delete(`/users/${username}/permanent${tenantIdQuery}`)
+        })
+        await Promise.all(promises)
+      } else {
+        const endpoint = action === 'suspend' ? 'bulk-disable' : action === 'enable' ? 'bulk-enable' : action === 'transfer' ? 'bulk-transfer' : 'bulk-delete'
+        const payload: any = { usernames: selectedUsers }
+        await api.post(`/users/${endpoint}`, payload)
+      }
+      toast.success(`Successfully processed bulk action`)
+      setSelectedUsers([])
+      fetchUsers(statusFilter === 'bin')
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || `Failed to process bulk action`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedUsers(paginatedData.map(u => u.username))
+    } else {
+      setSelectedUsers([])
+    }
+  }
+
+  const toggleSelectUser = (username: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUsers(prev => [...prev, username])
+    } else {
+      setSelectedUsers(prev => prev.filter(u => u !== username))
+    }
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           user.mac.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || (statusFilter === "online" ? user.isOnline : !user.isOnline)
+    const matchesStatus = 
+      statusFilter === "all" || 
+      statusFilter === "bin" ||
+      (statusFilter === "online" && user.isOnline) ||
+      (statusFilter === "offline" && !user.isOnline) ||
+      (statusFilter === "suspended" && user.isSuspended);
     const matchesTenant = selectedTenantFilter === "all" || user.tenantId === selectedTenantFilter;
+    const matchesGroup = selectedGroupFilter === "all" || user.groupId === selectedGroupFilter;
     
-    return matchesSearch && matchesStatus && matchesTenant;
+    return matchesSearch && matchesStatus && matchesTenant && matchesGroup;
   })
 
   const {
@@ -261,8 +396,9 @@ export function UsersPage() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3 px-4 sm:px-6">
+      <div className="w-full">
+        <Card>
+          <CardHeader className="pb-3 px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -291,7 +427,20 @@ export function UsersPage() {
                 </>
               )}
               <Filter className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={selectedGroupFilter} onValueChange={setSelectedGroupFilter}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {groups
+                    .filter(g => selectedTenantFilter === "all" || g.tenantId === selectedTenantFilter)
+                    .map(g => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setSelectedUsers([]); }}>
                 <SelectTrigger className="w-full sm:w-[150px]">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -299,20 +448,46 @@ export function UsersPage() {
                   <SelectItem value="all">{t('users.filterAll')}</SelectItem>
                   <SelectItem value="online">{t('users.filterOnline')}</SelectItem>
                   <SelectItem value="offline">{t('users.filterOffline')}</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="bin">Trash Bin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0 flex flex-col h-[540px]">
+          {selectedUsers.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 border border-border/50 rounded-lg">
+              <span className="text-sm font-medium mx-2">{selectedUsers.length} selected</span>
+              {statusFilter !== 'bin' ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => handleBulkAction('suspend')}>Suspend</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleBulkAction('enable')}>Reactivate</Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleBulkAction('delete')}>Delete</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => handleBulkAction('restore')}>Restore</Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleBulkAction('hard_delete')}>Permanently Delete</Button>
+                </>
+              )}
+            </div>
+          )}
           <div className="rounded-md border overflow-auto max-h-[420px]">
             <Table className="min-w-[800px] sm:min-w-full">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox 
+                      checked={selectedUsers.length > 0 && selectedUsers.length === paginatedData.length}
+                      onCheckedChange={(c) => toggleSelectAll(!!c)}
+                    />
+                  </TableHead>
                   <TableHead>{t('users.colUsername')}</TableHead>
                   {user?.role === "super_admin" && !isImpersonating && (
                     <TableHead>Tenant / Site</TableHead>
                   )}
+                  <TableHead>Group</TableHead>
                   <TableHead>Profile</TableHead>
                   <TableHead className="hidden md:table-cell">{t('users.colMac')}</TableHead>
                   <TableHead className="hidden lg:table-cell">{t('users.colIp')}</TableHead>
@@ -324,13 +499,19 @@ export function UsersPage() {
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={user?.role === "super_admin" && !isImpersonating ? 8 : 7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={user?.role === "super_admin" && !isImpersonating ? 10 : 9} className="h-24 text-center text-muted-foreground">
                       No users found.
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedData.map((u) => (
                     <TableRow key={u.id} className="hover:bg-muted/50 transition-colors">
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedUsers.includes(u.username)}
+                          onCheckedChange={(c) => toggleSelectUser(u.username, !!c)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <span
                           className={`font-semibold cursor-pointer hover:underline transition-colors ${
@@ -350,12 +531,18 @@ export function UsersPage() {
                           </Badge>
                         </TableCell>
                       )}
+                      <TableCell><Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">{u.groupName || "-"}</Badge></TableCell>
                       <TableCell><Badge variant="outline">{u.profileName}</Badge></TableCell>
                       <TableCell className={`font-mono text-xs hidden md:table-cell ${u.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{u.mac}</TableCell>
                       <TableCell className={`font-mono text-xs hidden lg:table-cell ${u.isOnline ? "text-foreground font-medium" : "text-muted-foreground/60"}`}>{u.ip}</TableCell>
                       <TableCell className={`hidden sm:table-cell ${u.isOnline ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground/60"}`}>{u.dataUsage}</TableCell>
                       <TableCell>
-                        {u.isOnline ? (
+                        {u.isSuspended ? (
+                          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 px-2 py-0.5 font-medium inline-flex items-center gap-1.5 w-fit">
+                            <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                            Suspended
+                          </Badge>
+                        ) : u.isOnline ? (
                           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 px-2 py-0.5 font-medium inline-flex items-center gap-1.5 w-fit">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             {t('users.statusOnline')}
@@ -376,25 +563,41 @@ export function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleOpenDetails(u.username)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              {t('users.actionEdit')}
-                            </DropdownMenuItem>
-                            {u.isOnline && (
-                              <DropdownMenuItem className="text-orange-600 focus:text-orange-600">
-                                <LogOut className="mr-2 h-4 w-4" />
-                                {t('users.actionDisconnect')}
-                              </DropdownMenuItem>
+                            {statusFilter !== 'bin' ? (
+                              <>
+                                <DropdownMenuItem onClick={() => handleOpenDetails(u.username)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenEdit(u)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  {t('users.actionEdit')}
+                                </DropdownMenuItem>
+                                {u.isOnline && (
+                                  <DropdownMenuItem className="text-orange-600 focus:text-orange-600">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    {t('users.actionDisconnect')}
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteUser(u.username)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {t('users.actionDelete')}
+                                </DropdownMenuItem>
+                              </>
+                            ) : (
+                              <>
+                                <DropdownMenuItem onClick={() => handleRestoreUser(u.username)}>
+                                  <Layers className="mr-2 h-4 w-4" />
+                                  Restore User
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteUser(u.username)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Permanently Delete
+                                </DropdownMenuItem>
+                              </>
                             )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteUser(u.username)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {t('users.actionDelete')}
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -414,8 +617,9 @@ export function UsersPage() {
           />
         </CardContent>
       </Card>
+    </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
           <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
             <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground pr-6">
@@ -432,7 +636,7 @@ export function UsersPage() {
                   <Label htmlFor="tenant" className="text-[14px] font-semibold text-foreground">Select Tenant</Label>
                   <div className="relative">
                     <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val, profileName: ""})}>
+                    <Select value={formData.tenantId} onValueChange={(val) => setFormData({...formData, tenantId: val, groupId: ""})}>
                       <SelectTrigger id="tenant" className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
                         <SelectValue placeholder="Select a tenant" />
                       </SelectTrigger>
@@ -480,20 +684,20 @@ export function UsersPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="profile" className="text-[14px] font-semibold text-foreground">
-                    Package / Profile
+                  <Label htmlFor="group" className="text-[14px] font-semibold text-foreground">
+                    Group <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
-                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Select value={formData.profileName} onValueChange={(val) => setFormData({...formData, profileName: val})} required>
+                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Select value={formData.groupId} onValueChange={(val) => setFormData({...formData, groupId: val})} required>
                       <SelectTrigger className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
-                        <SelectValue placeholder="Select a package" />
+                        <SelectValue placeholder="Select a group" />
                       </SelectTrigger>
                     <SelectContent>
-                      {profiles
-                        .filter(p => !p.tenantId || p.tenantId === formData.tenantId)
-                        .map(p => (
-                          <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                      {groups
+                        .filter(g => !g.tenantId || g.tenantId === formData.tenantId)
+                        .map(g => (
+                          <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                         ))
                       }
                     </SelectContent>
@@ -509,6 +713,80 @@ export function UsersPage() {
               <Button type="submit" disabled={isLoading || profiles.length === 0} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-background border-none shadow-2xl [&>button]:text-muted-foreground [&>button]:hover:bg-accent/50 [&>button]:right-4 sm:[&>button]:right-6 [&>button]:top-4 sm:[&>button]:top-6 [&>button]:rounded-full [&>button]:p-1.5 [&>button>svg]:h-5 [&>button>svg]:w-5">
+          <DialogHeader className="px-5 sm:px-8 py-5 sm:py-7 border-b border-border bg-background">
+            <DialogTitle className="text-[20px] sm:text-[22px] font-bold text-foreground">
+              Edit User
+            </DialogTitle>
+            <DialogDescription className="text-[13px] sm:text-[14px] text-muted-foreground mt-1 sm:mt-1.5">
+              Update password or reassign to a different group.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditUser} className="flex flex-col flex-1">
+            <div className="px-5 sm:px-8 py-6 space-y-5">
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[14px] font-semibold text-foreground">
+                    Username
+                  </Label>
+                  <Input value={editFormData.username} disabled className="h-[44px] rounded-[8px] border-border text-[14px] bg-muted/50" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-password" className="text-[14px] font-semibold text-foreground">
+                    New Password
+                  </Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="edit-password" 
+                      type="password"
+                      value={editFormData.password} 
+                      onChange={e => setEditFormData({...editFormData, password: e.target.value})} 
+                      placeholder="Leave blank to keep current"
+                      className="pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-group" className="text-[14px] font-semibold text-foreground">
+                    Group
+                  </Label>
+                  <div className="relative">
+                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Select value={editFormData.groupId} onValueChange={(val) => setEditFormData({...editFormData, groupId: val})}>
+                      <SelectTrigger className="w-full pl-9 h-[44px] rounded-[8px] border-border text-[14px] bg-background">
+                        <SelectValue placeholder="Select a group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Group</SelectItem>
+                        {groups
+                          .filter(g => !g.tenantId || g.tenantId === editFormData.tenantId)
+                          .map(g => (
+                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Changing the group will update the user's Profile automatically if the group has a default profile.</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="px-5 sm:px-7 py-4 border-t border-border bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-auto">
+              <Button type="button" variant="outline" className="w-full sm:w-auto h-[44px] px-5 rounded-[8px]" onClick={() => setIsEditUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-[44px] px-6 rounded-[8px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/20">
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
               </Button>
             </DialogFooter>
           </form>
@@ -535,6 +813,10 @@ export function UsersPage() {
             <div className="px-5 sm:px-8 py-6 space-y-6 max-h-[60vh] overflow-y-auto">
               {/* Summary Badges */}
               <div className="flex flex-wrap gap-2 items-center">
+                <Badge variant="outline" className="text-sm px-3 py-1 bg-primary/5 text-primary border-primary/20">
+                  <Layers className="h-3.5 w-3.5 mr-1.5 inline" />
+                  Group: {userDetails.groupName || "None"}
+                </Badge>
                 <Badge variant="outline" className="text-sm px-3 py-1">
                   Profile: {userDetails.profileName}
                 </Badge>

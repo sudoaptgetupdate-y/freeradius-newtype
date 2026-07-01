@@ -110,11 +110,15 @@
 *   **REQ-LOG-07 (Hybrid Logging Architecture):** รองรับสถาปัตยกรรมระดับ Enterprise SaaS ที่ให้ Tenant นำ Log Server ของตนเองมาเชื่อมต่อ (BYO-Loki / Dedicated Loki) ได้ โดยรองรับการระบุ `custom_loki_url` ในฐานข้อมูล ซึ่ง Backend จะทำหน้าที่เป็น Proxy ดึง Log จาก Custom URL นั้นมาแสดงผลบน Dashboard ให้ลูกค้าโดยอัตโนมัติ เพื่อลดภาระ Storage ของเซิร์ฟเวอร์หลัก
 
 ### 3.9 Telegram Bot Integration Module
-*   **REQ-TG-01 (Master Admin Bot):** เชื่อมต่อ Telegram แบบ **Webhook API** (ใส่ `Bot Token`) พร้อมสวิตช์เปิด/ปิด (Toggle) ระบบบอทส่วนกลาง ระบบจะแจ้งเตือนสถานะเซิร์ฟเวอร์ (Server Down/High CPU), แจ้งเตือนคำขอดาวน์โหลด Log และรองรับคำสั่งบอท (Slash Commands) เช่น `/status`
+*   **REQ-TG-01 (Master Admin Bot):** เชื่อมต่อ Telegram แบบ **Webhook API** (ใส่ `Bot Token`) พร้อมสวิตช์เปิด/ปิด (Toggle) ระบบบอทส่วนกลาง ระบบจะแจ้งเตือนสถานะเซิร์ฟเวอร์ (Server Down/High CPU), แจ้งเตือนคำขอดาวน์โหลด Log และรองรับคำสั่งบอท (Slash Commands) และอนุมัติผ่านแอปพลิเคชันโดยตรง
 *   **REQ-TG-02 (Tenant Admin Bot):** มีหน้าต่างตั้งค่าสำหรับผู้เช่าเพื่อระบุ `Chat ID` ของร้านตนเอง พร้อมสวิตช์เปิด/ปิดการแจ้งเตือนแบบราย Site รวมถึงรองรับระบบแจ้งเตือนและ Interactive Commands:
     *   **Guest Approval:** เมื่อมีการลงทะเบียนผ่าน Captive Portal บอทจะส่งข้อความแจ้งเตือนพร้อมปุ่ม Inline Keyboard `[Approve]` หรือ `[Decline]` ให้กดจาก Telegram ได้ทันที
-    *   **NAS Status Alert:** แจ้งเตือนเมื่อ Router (Mikrotik/Fortigate) ขาดการเชื่อมต่อ
-    *   **Interactive Commands:** รองรับคำสั่งจัดการผู้ใช้งานผ่านแชท เช่น `/online` (ดูยอดคนใช้งาน), `/kick <username>` (เตะผู้ใช้ออก), และ `/disable <username>` (ระงับบัญชี)
+    *   **NAS Status Alert:** แจ้งเตือนเมื่อ Router (Mikrotik/Fortigate) ขาดการเชื่อมต่อ (Offline)
+    *   **Interactive Card Commands:** รองรับคำสั่งเช็กสถานะการใช้งานรายผู้ใช้ผ่านระบบ Card UI ใน Telegram:
+        - `/user <username>` (หรือ ค้นหาด้วยเบอร์โทร/อีเมล) ตอบกลับด้วยข้อความระบุสิทธิ์สถานะ การใช้งาน และวันหมดอายุ พร้อมปุ่ม Inline: `[⚡ Kick Device]`, `[🚫 Suspend/Reactivate]`, `[➕ Extend Package]`, และ `[🗑️ Delete User]`
+        - `/find <query>` เพื่อค้นหาผู้ใช้ที่ชื่อคล้ายกัน และส่งคืนปุ่มเลือกเปิดการ์ดผู้ใช้งาน
+        - `/status` เช็กเราเตอร์ สถานะระบบโดยรวม และปุ่มกด PING/ดึงผู้ใช้ออนไลน์
+        - `/voucher <จำนวน> <แพ็กเกจ>` เจนคูปองด่วนพร้อมส่งปุ่มสำหรับดาวน์โหลด PDF กลับมาในแชท
 
 ### 3.10 UI/UX & Data Lifecycle Standards (มาตรฐานส่วนติดต่อผู้ใช้และการจัดการข้อมูล)
 *   **REQ-STD-01 (Data Deletion Policy - Soft vs Hard Delete):** 

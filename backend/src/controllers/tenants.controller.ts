@@ -89,7 +89,7 @@ export const createTenant = async (request: FastifyRequest, reply: FastifyReply)
   } catch (error: any) {
     request.log.error(error);
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     if (error.message === "Admin email already exists") {
       return reply.status(409).send({ error: "Admin email already exists" });
@@ -142,7 +142,7 @@ export const updateTenant = async (request: FastifyRequest<{ Params: { id: strin
   } catch (error: any) {
     request.log.error(error);
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     if (error.message === "Tenant not found") {
       return reply.status(404).send({ error: "Tenant not found" });

@@ -41,6 +41,9 @@ erDiagram
     tenants ||--o{ radcheck : "manages internet users"
     tenants ||--o{ radusergroup : "assigns users to profiles"
     tenants ||--o{ radacct : "collects accounting logs"
+    tenants ||--o{ organizations : "has groups"
+    organizations ||--o{ user_organizations : "has members"
+    radcheck ||--o{ user_organizations : "belongs to groups"
 
     tenants {
         uuid id PK
@@ -71,6 +74,20 @@ erDiagram
         uuid tenant_id FK
         varchar username
     }
+    organizations {
+        uuid id PK
+        uuid tenant_id FK
+        varchar name
+        varchar description
+        varchar default_profile
+        varchar status
+    }
+    user_organizations {
+        uuid id PK
+        uuid organization_id FK
+        int radcheck_id FK
+        uuid tenant_id FK
+    }
 ```
 
 ---
@@ -91,6 +108,19 @@ erDiagram
 > ระบบไม่อนุญาตให้แก้ไขช่อง `default_register_profile` ด้วยตนเองในขณะที่กำลังสร้าง Tenant ใหม่ เพื่อป้องกันการตั้งค่าผิดพลาด โดยระบบจะผูกโปรไฟล์ตามประเภทอุปกรณ์ที่เลือกให้เอง
 
 ---
+
+### 3.1.1 ความสัมพันธ์ระหว่าง Primary Device Type, Profile และ Group
+`primary_device_type` ของ Tenant มีบทบาทในการสร้าง **Default Profile** (เช่น `Default-MikroTik`) เท่านั้น ซึ่งเป็น Profile ตั้งต้นระดับ Tenant สำหรับกรณีเหล่านี้:
+- **Self-Register:** ผู้ใช้ที่สมัครผ่าน Captive Portal จะถูกผูกกับ `defaultRegisterProfile` โดยตรง (ยังไม่ได้อยู่ใน Group ใด)
+- **Voucher Users:** ผู้ใช้ Voucher ถูกผูกกับ Profile โดยตรง เป็นแบบ Stateless
+
+**สำหรับ Organization Users (ผู้ใช้ที่มี Group):**
+- Profile จะมาจาก `defaultProfile` ของ **Group** ที่ User สังกัดอยู่
+- `primary_device_type` ของ Tenant ยังคงใช้เป็น Template สำหรับสร้าง Profile ใหม่ใน Wizard (Auto-focus Tab) แต่ **ไม่ได้บังคับ** ให้ Group ต้องใช้ Default Profile นั้น
+- แอดมินสามารถสร้าง Group และเลือก Profile ใดก็ได้ตามต้องการ
+
+> [!TIP]
+> สรุป: `primary_device_type` → ควบคุม **Default Profile** ของ Tenant | **Group** → ควบคุม **Profile จริงของผู้ใช้** | ทั้งสองระดับแยกกันทำงานได้อิสระ
 
 ### 3.2 การอัปเดตและการย้ายผู้ใช้งานเมื่อเปลี่ยนอุปกรณ์ (Migration Setup)
 หาก Master ทำการแก้ไข Tenant และเปลี่ยนค่า `Primary Device Type` (เช่น เปลี่ยนจาก `MikroTik` ไปเป็น `FortiGate`) ระบบจะมีกลไกรองรับความปลอดภัยดังนี้:

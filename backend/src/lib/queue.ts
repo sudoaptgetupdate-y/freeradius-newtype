@@ -8,8 +8,8 @@ import { globalSettings } from "../schema/settings";
 let redisUrl = env.REDIS_URL;
 try {
   const settings = await db.select().from(globalSettings).limit(1);
-  if (settings.length > 0 && settings[0].redisHost) {
-    const s = settings[0];
+  if (settings.length > 0 && settings[0]!.redisHost) {
+    const s = settings[0]!;
     const passwordPart = s.redisPassword ? `:${s.redisPassword}@` : "";
     redisUrl = `redis://${passwordPart}${s.redisHost}:${s.redisPort || 6379}`;
   }

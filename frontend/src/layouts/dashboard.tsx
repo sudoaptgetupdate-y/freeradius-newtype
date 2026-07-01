@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTranslation } from "react-i18next"
-import { LayoutDashboard, Users, Settings, LogOut, Menu, Building2, Server, ShieldCheck, Search, Bell, ChevronDown, Wifi, UserCog, Ticket, Library, Palette } from "lucide-react"
+import { LayoutDashboard, Users, Settings, LogOut, Menu, Building2, Server, ShieldCheck, Search, Bell, ChevronDown, Wifi, UserCog, Ticket, Library, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
@@ -61,8 +61,9 @@ export function DashboardLayout() {
         <NavItem to="/dictionary" icon={Library} label="Radius Dictionary" />
         <NavItem to="/nas" icon={Server} label={t('nav.nas')} />
         <NavItem to="/vouchers" icon={Ticket} label="Vouchers" />
+        <NavItem to="/groups" icon={Layers} label="Groups" />
         <NavItem to="/users" icon={Users} label={t('nav.users')} />
-        <NavItem to="/portal-settings" icon={Palette} label="Portal Settings" />
+        <NavItem to="/site-settings" icon={Settings} label="Site Settings" />
         
         {user?.role === "super_admin" && !isImpersonating && (
           <div className="mt-4 pt-4 border-t border-sidebar-border/50">

@@ -146,6 +146,7 @@ export function VouchersPage() {
     fetchBatches()
     fetchTenants()
     fetchProfiles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   useEffect(() => {

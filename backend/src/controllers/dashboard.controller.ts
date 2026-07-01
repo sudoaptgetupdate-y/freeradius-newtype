@@ -12,7 +12,7 @@ export const getDashboardStats = async (request: FastifyRequest, reply: FastifyR
     let totalTenants = 1;
     if (user.role === 'super_admin') {
       const tenantCount = await db.select({ count: count() }).from(tenants);
-      totalTenants = tenantCount[0].count;
+      totalTenants = tenantCount[0]!.count;
     }
 
     // Online Users (from radacct where acctstoptime is null)
@@ -31,27 +31,27 @@ export const getDashboardStats = async (request: FastifyRequest, reply: FastifyR
         );
     }
     const onlineUsersRes = await onlineUsersQuery;
-    const onlineUsers = onlineUsersRes[0].count;
+    const onlineUsers = onlineUsersRes[0]!.count;
 
     // Total Traffic (Sum of acctinputoctets and acctoutputoctets)
-    let trafficQuery = db
-      .select({
-        download: sum(radacct.acctoutputoctets).mapWith(Number), // NAS Output = User Download
-        upload: sum(radacct.acctinputoctets).mapWith(Number),   // NAS Input = User Upload
-      })
-      .from(radacct);
-
+    let trafficRes;
+    
     if (user.role !== 'super_admin') {
-      trafficQuery = db
+      trafficRes = await db
         .select({
           download: sum(radacct.acctoutputoctets).mapWith(Number),
           upload: sum(radacct.acctinputoctets).mapWith(Number),
         })
         .from(radacct)
         .where(eq(radacct.tenantId, user.tenantId));
+    } else {
+      trafficRes = await db
+        .select({
+          download: sum(radacct.acctoutputoctets).mapWith(Number), // NAS Output = User Download
+          upload: sum(radacct.acctinputoctets).mapWith(Number),   // NAS Input = User Upload
+        })
+        .from(radacct);
     }
-
-    const trafficRes = await trafficQuery;
     const download = trafficRes[0]?.download || 0;
     const upload = trafficRes[0]?.upload || 0;
     const totalTrafficBytes = download + upload;

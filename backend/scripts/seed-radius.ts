@@ -15,11 +15,10 @@ async function run() {
     console.log("No tenant found. Creating a dummy admin tenant...");
     const newTenant = await db.insert(tenants).values({
       name: "Default SAAS Tenant",
-      domain: "saas.local",
     }).returning();
-    tenantId = newTenant[0].id;
+    tenantId = newTenant[0]!.id;
   } else {
-    tenantId = tenantRes[0].id;
+    tenantId = tenantRes[0]!.id;
   }
 
   // 2. Insert dummy users into radcheck

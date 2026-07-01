@@ -16,7 +16,12 @@ export declare const settingsSchema: z.ZodObject<{
     smtpPassword: z.ZodPreprocess<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     smtpSender: z.ZodPreprocess<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     timezone: z.ZodDefault<z.ZodString>;
+    googleClientId: z.ZodPreprocess<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    googleClientSecret: z.ZodPreprocess<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    lineChannelId: z.ZodPreprocess<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    lineChannelSecret: z.ZodPreprocess<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
 }, z.core.$strip>;
 export declare const getSettings: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 export declare const updateSettings: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
+export declare const syncTelegramWebhook: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 //# sourceMappingURL=settings.controller.d.ts.map

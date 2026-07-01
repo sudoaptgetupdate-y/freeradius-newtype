@@ -88,6 +88,7 @@ export default function AdminsPage() {
   useEffect(() => {
     fetchAdmins()
     fetchTenants()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleCreateAdmin = async (e: React.FormEvent) => {

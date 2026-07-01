@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 
 export const organizations = pgTable("organizations", {
@@ -10,4 +10,16 @@ export const organizations = pgTable("organizations", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
+});
+
+export const userOrganizations = pgTable("user_organizations", {
+  id: serial("id").primaryKey(),
+  tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
+  username: varchar("username", { length: 64 }).notNull(),
+  organizationId: uuid("organization_id").references(() => organizations.id).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    uniqueIdx: uniqueIndex("user_org_unique_idx").on(table.tenantId, table.username),
+  };
 });

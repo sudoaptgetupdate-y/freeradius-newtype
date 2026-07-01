@@ -11,12 +11,18 @@ import { UsersPage } from "@/pages/users"
 import TenantsPage from "@/pages/tenants"
 import { ProfilesPage } from "@/pages/profiles"
 import { DictionaryPage } from "@/pages/dictionary"
+import GroupsPage from "@/pages/groups"
 import NasPage from "@/pages/nas"
 import AdminsPage from "@/pages/admins"
 import { VouchersPage } from "@/pages/vouchers"
 import PortalPage from "@/pages/public/portal-page"
 import SettingsPage from "@/pages/settings"
+import SiteSettings from "@/pages/site-settings"
 import PortalSettings from "@/pages/portal-settings"
+import { SelfCareLayout } from "@/layouts/selfcare-layout"
+import { SelfCareLogin } from "@/pages/selfcare/login"
+import { SelfCareDashboard } from "@/pages/selfcare/dashboard"
+import { SelfCareSettings } from "@/pages/selfcare/settings"
 import "./i18n"
 
 function App() {
@@ -28,19 +34,31 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register/:tenantId" element={<PortalPage defaultTab="register" />} />
             <Route path="/portal/:tenantId" element={<PortalPage defaultTab="login" />} />
+            <Route path="/selfcare/:tenantId/login" element={<SelfCareLogin />} />
             
-            <Route element={<ProtectedRoute />}>
+            {/* Admin Routes */}
+            <Route element={<ProtectedRoute allowedRoles={["super_admin", "tenant_admin"]} />}>
               <Route path="/" element={<DashboardLayout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="tenants" element={<TenantsPage />} />
                 <Route path="profiles" element={<ProfilesPage />} />
                 <Route path="dictionary" element={<DictionaryPage />} />
+                <Route path="groups" element={<GroupsPage />} />
                 <Route path="nas" element={<NasPage />} />
                 <Route path="admins" element={<AdminsPage />} />
                 <Route path="vouchers" element={<VouchersPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="site-settings" element={<SiteSettings />} />
                 <Route path="portal-settings" element={<PortalSettings />} />
+              </Route>
+            </Route>
+
+            {/* Self-Care Routes */}
+            <Route element={<ProtectedRoute allowedRoles={["end_user"]} />}>
+              <Route path="/selfcare/:tenantId" element={<SelfCareLayout />}>
+                <Route path="dashboard" element={<SelfCareDashboard />} />
+                <Route path="settings" element={<SelfCareSettings />} />
               </Route>
             </Route>
 

@@ -2,8 +2,10 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   getPortalSettings,
+  getPortalSettingsAdmin,
   updatePortalSettings,
   registerUser,
+  testTelegramSettings,
   updateSettingsSchema,
   registerUserSchema,
 } from "../controllers/portal.controller";
@@ -31,6 +33,15 @@ export default async function (fastify: FastifyInstance) {
   }, registerUser);
 
   // --- Protected Routes ---
+  server.get("/settings/admin/:tenantId", {
+    preHandler: [fastify.requireTenantAdmin],
+    schema: {
+      params: z.object({ tenantId: z.string().uuid() }),
+      tags: ["Portal"],
+      description: "Get full portal settings (requires tenant_admin)",
+    },
+  }, getPortalSettingsAdmin);
+
   server.put("/settings", {
     preHandler: [fastify.requireTenantAdmin],
     schema: {
@@ -39,4 +50,13 @@ export default async function (fastify: FastifyInstance) {
       description: "Update portal settings (requires tenant_admin)",
     },
   }, updatePortalSettings);
+
+  server.post("/settings/telegram/test", {
+    preHandler: [fastify.requireTenantAdmin],
+    schema: {
+      body: z.object({ chatId: z.string().min(1) }),
+      tags: ["Portal"],
+      description: "Send test Telegram notification to verify Chat ID",
+    },
+  }, testTelegramSettings);
 }

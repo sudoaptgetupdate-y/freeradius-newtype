@@ -24,7 +24,7 @@ ngrok config edit
 ```yaml
 version: "3"
 agent:
-  authtoken: YOUR_AUTHTOKEN_HERE # รหัสยืนยันตัวตนของคุณจากเว็บ ngrok.com
+  authtoken: 3Frt1zxJxKIMArloqYnbJBdEbJc_4J128ozNVcfoeWYFuW3Vz # รหัสยืนยันตัวตนของคุณจากเว็บ ngrok.com
 tunnels:
   frontend:
     proto: http

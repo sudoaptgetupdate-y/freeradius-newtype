@@ -12,7 +12,6 @@ async function run() {
         console.log("No tenant found. Creating a dummy admin tenant...");
         const newTenant = await db.insert(tenants).values({
             name: "Default SAAS Tenant",
-            domain: "saas.local",
         }).returning();
         tenantId = newTenant[0].id;
     }

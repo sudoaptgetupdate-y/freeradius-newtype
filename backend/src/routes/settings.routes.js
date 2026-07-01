@@ -1,4 +1,4 @@
-import { getSettings, updateSettings, settingsSchema } from "../controllers/settings.controller";
+import { getSettings, updateSettings, settingsSchema, syncTelegramWebhook } from "../controllers/settings.controller";
 export const settingsRoutes = async (app) => {
     // All settings routes require authentication
     app.addHook("preHandler", app.authenticate);
@@ -8,6 +8,7 @@ export const settingsRoutes = async (app) => {
             body: settingsSchema,
         },
     }, updateSettings);
+    app.post("/telegram/sync-webhook", syncTelegramWebhook);
 };
 export default settingsRoutes;
 //# sourceMappingURL=settings.routes.js.map

@@ -120,46 +120,9 @@ export function ProfilesPage() {
     fetchProfiles()
     fetchTenants()
     fetchDictionary()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // @ts-expect-error unused
-  const handleCreateProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if ((user?.role === "super_admin" || user?.role === "admin") && !formData.tenantId) {
-      toast.error("Please select a Tenant before saving.")
-      return
-    }
-
-    setIsLoading(true)
-    
-    try {
-      const payload: any = { name: formData.name }
-      if (formData.tenantId) payload.tenantId = formData.tenantId
-      if (formData.downloadSpeed) payload.downloadSpeed = formData.downloadSpeed
-      if (formData.uploadSpeed) payload.uploadSpeed = formData.uploadSpeed
-      if (formData.sessionTimeout) payload.sessionTimeout = parseInt(formData.sessionTimeout)
-      if (formData.sharedUsers) payload.sharedUsers = parseInt(formData.sharedUsers)
-      
-      if (editingProfileName) {
-        payload.oldName = editingProfileName
-        await api.put("/profiles", payload)
-      } else {
-        await api.post("/profiles", payload)
-      }
-      
-      setIsDialogOpen(false)
-      setFormData({ name: "", tenantId: "", downloadSpeed: "", uploadSpeed: "", sessionTimeout: "", sharedUsers: "", vlanId: "", fortiGroupName: "", advancedAttributes: [] })
-      setEditingProfileName(null)
-      toast.success(editingProfileName ? "Profile updated successfully!" : "Profile created successfully!")
-      fetchProfiles()
-    } catch (error: any) {
-      console.error(editingProfileName ? "Failed to update profile:" : "Failed to create profile:", error)
-      toast.error(error.response?.data?.error || (editingProfileName ? "Failed to update profile" : "Failed to create profile"))
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleOpenCreate = () => {
     setEditingProfileName(null)

@@ -94,6 +94,7 @@ export default function NasPage() {
   useEffect(() => {
     fetchNas()
     fetchTenants()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleCreateNas = async (e: React.FormEvent) => {

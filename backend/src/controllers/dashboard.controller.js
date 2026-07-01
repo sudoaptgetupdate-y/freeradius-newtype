@@ -26,14 +26,9 @@ export const getDashboardStats = async (request, reply) => {
         const onlineUsersRes = await onlineUsersQuery;
         const onlineUsers = onlineUsersRes[0].count;
         // Total Traffic (Sum of acctinputoctets and acctoutputoctets)
-        let trafficQuery = db
-            .select({
-            download: sum(radacct.acctoutputoctets).mapWith(Number), // NAS Output = User Download
-            upload: sum(radacct.acctinputoctets).mapWith(Number), // NAS Input = User Upload
-        })
-            .from(radacct);
+        let trafficRes;
         if (user.role !== 'super_admin') {
-            trafficQuery = db
+            trafficRes = await db
                 .select({
                 download: sum(radacct.acctoutputoctets).mapWith(Number),
                 upload: sum(radacct.acctinputoctets).mapWith(Number),
@@ -41,7 +36,14 @@ export const getDashboardStats = async (request, reply) => {
                 .from(radacct)
                 .where(eq(radacct.tenantId, user.tenantId));
         }
-        const trafficRes = await trafficQuery;
+        else {
+            trafficRes = await db
+                .select({
+                download: sum(radacct.acctoutputoctets).mapWith(Number), // NAS Output = User Download
+                upload: sum(radacct.acctinputoctets).mapWith(Number), // NAS Input = User Upload
+            })
+                .from(radacct);
+        }
         const download = trafficRes[0]?.download || 0;
         const upload = trafficRes[0]?.upload || 0;
         const totalTrafficBytes = download + upload;

@@ -25,15 +25,15 @@ const updateProfileSchema = profileSchema.extend({
 export const getProfiles = async (request, reply) => {
     try {
         const user = request.user;
-        // Fetch all attributes for this tenant
+        const effectiveTenantId = user.tenantId ?? null;
         let replyAttrs, checkAttrs;
-        if (user.role === "super_admin" || user.role === "admin") {
-            replyAttrs = await db.select().from(radgroupreply);
-            checkAttrs = await db.select().from(radgroupcheck);
+        if (effectiveTenantId) {
+            replyAttrs = await db.select().from(radgroupreply).where(eq(radgroupreply.tenantId, effectiveTenantId));
+            checkAttrs = await db.select().from(radgroupcheck).where(eq(radgroupcheck.tenantId, effectiveTenantId));
         }
         else {
-            replyAttrs = await db.select().from(radgroupreply).where(eq(radgroupreply.tenantId, user.tenantId));
-            checkAttrs = await db.select().from(radgroupcheck).where(eq(radgroupcheck.tenantId, user.tenantId));
+            replyAttrs = await db.select().from(radgroupreply);
+            checkAttrs = await db.select().from(radgroupcheck);
         }
         // Group by groupname
         const profilesMap = new Map();
@@ -101,9 +101,9 @@ export const createProfile = async (request, reply) => {
     try {
         const user = request.user;
         const data = profileSchema.parse(request.body);
-        const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? data.tenantId : user.tenantId;
+        const targetTenantId = user.tenantId || request.body.tenantId || null;
         if (!targetTenantId) {
-            return reply.status(400).send({ error: "Tenant ID is required" });
+            return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
         }
         // Check if profile exists
         const existing = await db.select().from(radgroupreply).where(and(eq(radgroupreply.tenantId, targetTenantId), eq(radgroupreply.groupname, data.name))).limit(1);
@@ -188,9 +188,9 @@ export const updateProfile = async (request, reply) => {
     try {
         const user = request.user;
         const data = updateProfileSchema.parse(request.body);
-        const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? data.tenantId : user.tenantId;
+        const targetTenantId = user.tenantId || request.body.tenantId || null;
         if (!targetTenantId) {
-            return reply.status(400).send({ error: "Tenant ID is required" });
+            return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
         }
         // Ensure the old profile exists
         const existing = await db.select().from(radgroupreply).where(and(eq(radgroupreply.tenantId, targetTenantId), eq(radgroupreply.groupname, data.oldName))).limit(1);
@@ -297,9 +297,9 @@ export const deleteProfile = async (request, reply) => {
         if (!query.name) {
             return reply.status(400).send({ error: "Profile name is required in query" });
         }
-        const targetTenantId = (user.role === "super_admin" || user.role === "admin") ? query.tenantId : user.tenantId;
+        const targetTenantId = user.tenantId || request.query.tenantId || null;
         if (!targetTenantId) {
-            return reply.status(400).send({ error: "Tenant ID is required to delete a profile" });
+            return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
         }
         // Check if profile is being used by any users
         const usersInGroup = await db.select().from(radusergroup).where(and(eq(radusergroup.tenantId, targetTenantId), eq(radusergroup.groupname, query.name))).limit(1);

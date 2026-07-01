@@ -52,7 +52,7 @@ export const createNas = async (request: FastifyRequest, reply: FastifyReply) =>
     ).limit(1);
 
     if (existingNas.length > 0) {
-      if (existingNas[0].nasname === data.nasname) {
+      if (existingNas[0]!.nasname === data.nasname) {
         return reply.status(409).send({ error: "Conflict", message: "IP Address (NASName) already exists in the system" });
       }
       return reply.status(409).send({ error: "Conflict", message: "Shortname already exists in this tenant" });
@@ -67,7 +67,7 @@ export const createNas = async (request: FastifyRequest, reply: FastifyReply) =>
   } catch (error: any) {
     request.log.error(error);
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     reply.status(500).send({ error: "Failed to create NAS" });
   }
@@ -97,13 +97,13 @@ export const updateNas = async (request: FastifyRequest<{ Params: { id: string }
           not(eq(nas.id, parseInt(id))),
           or(
             data.nasname ? eq(nas.nasname, data.nasname) : undefined,
-            data.shortname ? and(eq(nas.shortname, data.shortname), eq(nas.tenantId, currentNas[0].tenantId)) : undefined
+            data.shortname ? and(eq(nas.shortname, data.shortname), eq(nas.tenantId, currentNas[0]!.tenantId)) : undefined
           )
         )
       ).limit(1);
 
       if (duplicateCheck.length > 0) {
-        if (data.nasname && duplicateCheck[0].nasname === data.nasname) {
+        if (data.nasname && duplicateCheck[0]!.nasname === data.nasname) {
           return reply.status(409).send({ error: "Conflict", message: "IP Address (NASName) already exists in the system" });
         }
         return reply.status(409).send({ error: "Conflict", message: "Shortname already exists in this tenant" });
@@ -123,7 +123,7 @@ export const updateNas = async (request: FastifyRequest<{ Params: { id: string }
   } catch (error: any) {
     request.log.error(error);
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     reply.status(500).send({ error: "Failed to update NAS" });
   }
@@ -269,7 +269,7 @@ export const kickNasUser = async (request: FastifyRequest<{ Params: { id: string
   } catch (error: any) {
     request.log.error(error);
     if (error instanceof z.ZodError) {
-      return reply.status(400).send({ error: "Validation error", details: error.errors });
+      return reply.status(400).send({ error: "Validation error", details: error.issues });
     }
     reply.status(500).send({ error: "Failed to kick user", message: error.message });
   }

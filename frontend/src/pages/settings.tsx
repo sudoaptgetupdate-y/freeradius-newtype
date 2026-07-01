@@ -58,6 +58,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSettings = async () => {
@@ -70,7 +71,7 @@ export default function SettingsPage() {
         timezone: "Asia/Bangkok",
         ...res.data
       });
-    } catch (error) {
+    } catch {
       toast.error("Failed to load global settings");
     } finally {
       setLoading(false);
@@ -93,8 +94,23 @@ export default function SettingsPage() {
       await api.put("/settings", data);
       toast.success("Configuration updated successfully!");
       setActiveDialog(null); // Close dialog on success
-    } catch (error) {
+    } catch {
       toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyncWebhook = async () => {
+    const url = window.prompt("Enter your public server URL (e.g. https://my-ngrok-url.app) to sync webhook:");
+    if (!url) return;
+    
+    try {
+      setSaving(true);
+      await api.post("/settings/telegram/sync-webhook", { webhookUrl: url.replace(/\/$/, "") });
+      toast.success("Webhook synchronized successfully!");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to sync webhook");
     } finally {
       setSaving(false);
     }
@@ -306,6 +322,16 @@ export default function SettingsPage() {
                     <Label>Master Chat ID</Label>
                     <Input {...register("telegramChatId")} placeholder="-100123456789" className="h-[44px] rounded-[8px]" />
                     <p className="text-xs text-muted-foreground">For server alerts and administrative notifications.</p>
+                  </div>
+                  <div className="pt-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleSyncWebhook}
+                      className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" /> Sync Webhook URL with Telegram
+                    </Button>
                   </div>
                 </div>
               </div>

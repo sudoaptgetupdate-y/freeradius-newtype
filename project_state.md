@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-07-01
 
-## Current Phase: Phase 13 Completed (Social Login Integration)
+## Current Phase: Phase 16 Completed (User Group / Organizations System)
 
 ### ✅ What has been completed:
 1. **Requirements & Architecture (Phase 1):**
@@ -102,6 +102,21 @@
     - Updated `login-form.tsx` on the captive portal to dynamically generate OAuth authorization URLs while securely passing gateway states (mac, ip, dst, linkLogin).
     - Fixed backend routing redirect port mapping bug by replacing `request.hostname` with `request.host` in Fastify to preserve port number `8000` under OAuth callbacks.
     - Documented complete multi-tunnel setup and client verification workflow using ngrok (`docs/ngrok_testing_guide.md`) for localized mobile testing alongside physical Mikrotik routers.
+21. **End-User Self-Care Portal (Phase 14):**
+    - Built a dashboard for internet users to check data and time quotas, change passwords, and manage active sessions.
+    - Designed `selfcare-layout.tsx` for a clean, user-focused interface isolated from admin views.
+    - Implemented self-service device disconnection utilizing `RadiusCoAService` to send Disconnect-Messages (DM) to the NAS.
+    - Enforced strict authorization guard (`role: "end_user"`) through context and API layers.
+    - Resolved widespread TypeScript `Object is possibly 'undefined'` and Zod error-typing issues across multiple controllers to improve application stability.
+22. **User Group / Organizations System (Phase 16):**
+    - Created `organizations` and `user_organizations` database schema and Drizzle ORM migrations.
+    - Implemented full backend CRUD for Groups including `bulkDisableGroupUsers` and `bulkDeleteGroupUsers` with RADIUS CoA session termination for all affected users.
+    - Updated `users.controller.ts` to support `groupId` parameter: Profile assignment now inherits from the Group's `defaultProfile` (stored in `radusergroup`) instead of direct selection.
+    - Created `groups.tsx` frontend page with full CRUD dialogs, member view, Bulk Suspend and Bulk Delete actions.
+    - Updated `users.tsx` Add User dialog to query and select a **Group** instead of a raw Profile.
+    - Integrated `groups` route into `App.tsx` and sidebar navigation in `dashboard.tsx`.
+    - Updated `docs/product_features_and_roles.md`: expanded Groups/Organizations section with Profile Inheritance, Bulk actions, and User Details feature. Updated Users section to reflect Group-based creation flow. Clarified Voucher remains Profile-direct (stateless).
+    - Updated `docs/tenant_management.md`: added `organizations` and `user_organizations` to ERD and schema tables, added section 3.1.1 documenting the relationship between `primary_device_type`, Default Profile, and Groups.
 
 ### 3. UI/UX Mockups & Design Decisions:
    - Generated visual mockups for Master Dashboard, Tenant Dashboard, and Captive Portal.
@@ -118,15 +133,17 @@
 - However, several critical requirements from the SRS are still pending implementation to achieve true MVP for a SaaS Hotspot system.
 
 ### 🎯 Next Steps & Pending Phases:
-1. **Phase 14: End-User Self-Care Portal (REQ-USER-05)**
-   - Build a dashboard for internet users to check quota, change passwords, and self-disconnect sessions via RADIUS CoA.
-4. **Phase 15: Telegram Bot Integration (REQ-SAAS-06)**
-   - Implement `webhooks.controller.ts` to send alerts (NAS offline, approval requests) to Telegram.
-5. **Phase 16: Walled Garden & MAB (REQ-MTK-03)**
+1. **Phase 15: Telegram Bot Integration (REQ-SAAS-06)**
+   - Implement `webhooks.controller.ts` Webhook endpoint to process slash commands and interact with users via Telegram.
+   - Design interactive Telegram Card UI for `/user`, `/find`, `/status`, and `/voucher` commands with Inline Keyboards (Approve, Kick, Suspend, Extend).
+   - Support system alert webhooks (server status for Master Admin, NAS offline for Tenant Admin).
+2. **Phase 17: Walled Garden & MAB (REQ-MTK-03)**
    - Implement UI for `mac_bypass` schema to manage IoT devices and Walled Garden lists.
-6. **Phase 17: True Grafana Loki Integration (REQ-LOG-01)**
+3. **Phase 18: True Grafana Loki Integration (REQ-LOG-01)**
    - Replace the current "Mock" logs in the Dashboard with real LogQL queries to Grafana Loki.
-7. **Hardware Integration:**
+4. **User Details Page (Enhancement):**
+   - Implement a dedicated `users/[username].tsx` detail page showing Session History (radacct), current quota, and action buttons (Disconnect, Suspend, Change Group, Reset Password).
+5. **Hardware Integration:**
    - Connect a real Mikrotik Router to fully verify CoA / Disconnect functionality. (API status fetching has been verified).
 
 ## Project Structure

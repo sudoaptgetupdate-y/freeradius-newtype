@@ -17,15 +17,10 @@ const nasSchema = z.object({
 export const getNasList = async (request, reply) => {
     try {
         const user = request.user;
-        // Superadmin should view all NAS devices across all tenants.
-        // Tenant Admin only views their own.
-        let allNas;
-        if (user.role === "super_admin" || user.role === "admin") {
-            allNas = await db.select().from(nas);
-        }
-        else {
-            allNas = await db.select().from(nas).where(eq(nas.tenantId, user.tenantId));
-        }
+        const effectiveTenantId = user.tenantId ?? null;
+        const allNas = effectiveTenantId
+            ? await db.select().from(nas).where(eq(nas.tenantId, effectiveTenantId))
+            : await db.select().from(nas);
         reply.send(allNas);
     }
     catch (error) {
@@ -37,10 +32,10 @@ export const createNas = async (request, reply) => {
     try {
         const user = request.user;
         const data = nasSchema.parse(request.body);
-        if (user.role === "super_admin" && !data.tenantId) {
-            return reply.status(400).send({ error: "Validation error", message: "Super admin must provide a tenantId" });
+        const tenantIdToUse = user.tenantId || request.body.tenantId || null;
+        if (!tenantIdToUse) {
+            return reply.status(400).send({ error: "Validation error", message: "Tenant context is required. Super Admin must provide a tenantId." });
         }
-        const tenantIdToUse = user.role === "super_admin" ? data.tenantId : user.tenantId;
         // Check for duplicates
         const existingNas = await db.select().from(nas).where(or(eq(nas.nasname, data.nasname), and(eq(nas.shortname, data.shortname), eq(nas.tenantId, tenantIdToUse)))).limit(1);
         if (existingNas.length > 0) {
@@ -58,7 +53,7 @@ export const createNas = async (request, reply) => {
     catch (error) {
         request.log.error(error);
         if (error instanceof z.ZodError) {
-            return reply.status(400).send({ error: "Validation error", details: error.errors });
+            return reply.status(400).send({ error: "Validation error", details: error.issues });
         }
         reply.status(500).send({ error: "Failed to create NAS" });
     }
@@ -68,12 +63,14 @@ export const updateNas = async (request, reply) => {
         const user = request.user;
         const { id } = request.params;
         const data = nasSchema.partial().parse(request.body);
+        const effectiveTenantId = user.tenantId ?? null;
+        // Build where clause: always filter by id, add tenantId scope if present
+        const scopeClause = effectiveTenantId
+            ? and(eq(nas.id, parseInt(id)), eq(nas.tenantId, effectiveTenantId))
+            : eq(nas.id, parseInt(id));
         // Check for duplicates on update
         if (data.nasname || data.shortname) {
-            const currentNasQuery = user.role === "super_admin" || user.role === "admin"
-                ? eq(nas.id, parseInt(id))
-                : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
-            const currentNas = await db.select().from(nas).where(currentNasQuery).limit(1);
+            const currentNas = await db.select().from(nas).where(scopeClause).limit(1);
             if (currentNas.length === 0) {
                 return reply.status(404).send({ error: "NAS not found or access denied" });
             }
@@ -85,13 +82,10 @@ export const updateNas = async (request, reply) => {
                 return reply.status(409).send({ error: "Conflict", message: "Shortname already exists in this tenant" });
             }
         }
-        const updateQuery = user.role === "super_admin" || user.role === "admin"
-            ? eq(nas.id, parseInt(id))
-            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
         const [updatedNas] = await db
             .update(nas)
             .set({ ...data, updatedAt: new Date() })
-            .where(updateQuery)
+            .where(scopeClause)
             .returning();
         if (!updatedNas) {
             return reply.status(404).send({ error: "NAS not found or access denied" });
@@ -101,7 +95,7 @@ export const updateNas = async (request, reply) => {
     catch (error) {
         request.log.error(error);
         if (error instanceof z.ZodError) {
-            return reply.status(400).send({ error: "Validation error", details: error.errors });
+            return reply.status(400).send({ error: "Validation error", details: error.issues });
         }
         reply.status(500).send({ error: "Failed to update NAS" });
     }
@@ -110,16 +104,13 @@ export const deleteNas = async (request, reply) => {
     try {
         const user = request.user;
         const { id } = request.params;
-        // NAS deletion is usually a hard delete, or we might need soft delete if we want to keep acct records?
-        // According to SKILL.md, core entities with relations (like NAS used in radacct via nasipaddress) 
-        // Wait, FreeRADIUS radacct uses `nasipaddress` string, not `nas.id`. So deleting NAS doesn't break radacct FKs.
-        // We will do a hard delete for NAS since it's just the authentication configuration for FreeRADIUS.
-        const deleteQuery = user.role === "super_admin" || user.role === "admin"
-            ? eq(nas.id, parseInt(id))
-            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
+        const effectiveTenantId = user.tenantId ?? null;
+        const deleteClause = effectiveTenantId
+            ? and(eq(nas.id, parseInt(id)), eq(nas.tenantId, effectiveTenantId))
+            : eq(nas.id, parseInt(id));
         const [deletedNas] = await db
             .delete(nas)
-            .where(deleteQuery)
+            .where(deleteClause)
             .returning();
         if (!deletedNas) {
             return reply.status(404).send({ error: "NAS not found or access denied" });
@@ -135,10 +126,11 @@ export const getNasStatus = async (request, reply) => {
     try {
         const user = request.user;
         const { id } = request.params;
-        const query = user.role === "super_admin" || user.role === "admin"
-            ? eq(nas.id, parseInt(id))
-            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
-        const [targetNas] = await db.select().from(nas).where(query).limit(1);
+        const effectiveTenantId = user.tenantId ?? null;
+        const scopeClause = effectiveTenantId
+            ? and(eq(nas.id, parseInt(id)), eq(nas.tenantId, effectiveTenantId))
+            : eq(nas.id, parseInt(id));
+        const [targetNas] = await db.select().from(nas).where(scopeClause).limit(1);
         if (!targetNas) {
             return reply.status(404).send({ error: "NAS not found or access denied" });
         }
@@ -164,10 +156,11 @@ export const getNasDhcp = async (request, reply) => {
     try {
         const user = request.user;
         const { id } = request.params;
-        const query = user.role === "super_admin" || user.role === "admin"
-            ? eq(nas.id, parseInt(id))
-            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
-        const [targetNas] = await db.select().from(nas).where(query).limit(1);
+        const effectiveTenantId = user.tenantId ?? null;
+        const scopeClause = effectiveTenantId
+            ? and(eq(nas.id, parseInt(id)), eq(nas.tenantId, effectiveTenantId))
+            : eq(nas.id, parseInt(id));
+        const [targetNas] = await db.select().from(nas).where(scopeClause).limit(1);
         if (!targetNas) {
             return reply.status(404).send({ error: "NAS not found or access denied" });
         }
@@ -194,10 +187,11 @@ export const kickNasUser = async (request, reply) => {
         const user = request.user;
         const { id } = request.params;
         const { username } = z.object({ username: z.string() }).parse(request.body);
-        const query = user.role === "super_admin" || user.role === "admin"
-            ? eq(nas.id, parseInt(id))
-            : and(eq(nas.id, parseInt(id)), eq(nas.tenantId, user.tenantId));
-        const [targetNas] = await db.select().from(nas).where(query).limit(1);
+        const effectiveTenantId = user.tenantId ?? null;
+        const scopeClause = effectiveTenantId
+            ? and(eq(nas.id, parseInt(id)), eq(nas.tenantId, effectiveTenantId))
+            : eq(nas.id, parseInt(id));
+        const [targetNas] = await db.select().from(nas).where(scopeClause).limit(1);
         if (!targetNas) {
             return reply.status(404).send({ error: "NAS not found or access denied" });
         }
@@ -226,7 +220,7 @@ export const kickNasUser = async (request, reply) => {
     catch (error) {
         request.log.error(error);
         if (error instanceof z.ZodError) {
-            return reply.status(400).send({ error: "Validation error", details: error.errors });
+            return reply.status(400).send({ error: "Validation error", details: error.issues });
         }
         reply.status(500).send({ error: "Failed to kick user", message: error.message });
     }

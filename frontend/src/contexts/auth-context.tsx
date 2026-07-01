@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect } from "react"
 
 type User = {
   id: string
-  email: string
+  email?: string
+  username?: string // For end_users
   role: string
   tenantId: string | null
   name?: string
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.user)
     if (stored) {
-      try { return JSON.parse(stored) } catch (e) { return null }
+      try { return JSON.parse(stored) } catch { return null }
     }
     return null
   })
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isImpersonating, setIsImpersonating] = useState<boolean>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.user)
     if (stored) {
-      try { return !!JSON.parse(stored).isImpersonating } catch (e) { return false }
+      try { return !!JSON.parse(stored).isImpersonating } catch { return false }
     }
     return false
   })
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedUser) {
       try {
         JSON.parse(storedUser)
-      } catch (e) {
+      } catch {
         logout()
       }
     }
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
