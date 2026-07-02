@@ -4,21 +4,21 @@ import 'react-toastify/dist/ReactToastify.css'
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
-import { LoginPage } from "@/pages/login"
+import { LoginPage } from "@/pages/login/index"
 import { DashboardLayout } from "@/layouts/dashboard"
-import { DashboardPage } from "@/pages/dashboard"
-import { UsersPage } from "@/pages/users"
-import TenantsPage from "@/pages/tenants"
-import { ProfilesPage } from "@/pages/profiles"
-import { DictionaryPage } from "@/pages/dictionary"
-import GroupsPage from "@/pages/groups"
-import NasPage from "@/pages/nas"
-import AdminsPage from "@/pages/admins"
-import { VouchersPage } from "@/pages/vouchers"
+import { DashboardPage } from "@/pages/dashboard/index"
+import { UsersPage } from "@/pages/users/index"
+import TenantsPage from "@/pages/tenants/index"
+import { ProfilesPage } from "@/pages/profiles/index"
+import { DictionaryPage } from "@/pages/dictionary/index"
+import GroupsPage from "@/pages/groups/index"
+import NasPage from "@/pages/nas/index"
+import AdminsPage from "@/pages/admins/index"
+import { VouchersPage } from "@/pages/vouchers/index"
 import PortalPage from "@/pages/public/portal-page"
-import SettingsPage from "@/pages/settings"
-import SiteSettings from "@/pages/site-settings"
-import PortalSettings from "@/pages/portal-settings"
+import SettingsPage from "@/pages/settings/index"
+import SiteSettings from "@/pages/site-settings/index"
+import PortalSettings from "@/pages/portal-settings/index"
 import { SelfCareLayout } from "@/layouts/selfcare-layout"
 import { SelfCareLogin } from "@/pages/selfcare/login"
 import { SelfCareDashboard } from "@/pages/selfcare/dashboard"
@@ -41,16 +41,20 @@ function App() {
               <Route path="/" element={<DashboardLayout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="users" element={<UsersPage />} />
-                <Route path="tenants" element={<TenantsPage />} />
                 <Route path="profiles" element={<ProfilesPage />} />
                 <Route path="dictionary" element={<DictionaryPage />} />
                 <Route path="groups" element={<GroupsPage />} />
                 <Route path="nas" element={<NasPage />} />
                 <Route path="admins" element={<AdminsPage />} />
                 <Route path="vouchers" element={<VouchersPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="site-settings" element={<SiteSettings />} />
                 <Route path="portal-settings" element={<PortalSettings />} />
+                <Route path="site-settings" element={<SiteSettings />} />
+                
+                {/* Super Admin Only Routes */}
+                <Route element={<ProtectedRoute allowedRoles={["super_admin"]} />}>
+                  <Route path="tenants" element={<TenantsPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
               </Route>
             </Route>
 

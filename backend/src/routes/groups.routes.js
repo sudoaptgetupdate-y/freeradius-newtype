@@ -8,6 +8,7 @@ export default async function groupsRoutes(server) {
         name: z.string().min(1, "Group name is required"),
         defaultProfile: z.string().optional().nullable(),
         description: z.string().optional().nullable(),
+        tenantId: z.string().uuid().optional().nullable(),
     });
     server.get("/", {
         schema: {

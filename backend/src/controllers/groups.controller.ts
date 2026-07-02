@@ -7,12 +7,14 @@ import { eq, and, isNull, desc, sql, inArray } from "drizzle-orm";
 
 // List all groups with user counts
 export const getGroups = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string; role: string };
+  const user = request.user as any;
+  const effectiveTenantId: string | null = user.tenantId ?? null;
 
   try {
     const result = await db
       .select({
         id: organizations.id,
+        tenantId: organizations.tenantId,
         name: organizations.name,
         defaultProfile: organizations.defaultProfile,
         description: organizations.description,
@@ -32,10 +34,7 @@ export const getGroups = async (request: FastifyRequest, reply: FastifyReply) =>
       .leftJoin(userOrganizations, eq(organizations.id, userOrganizations.organizationId))
       .leftJoin(radcheck, and(eq(userOrganizations.username, radcheck.username), eq(userOrganizations.tenantId, radcheck.tenantId), eq(radcheck.attribute, 'Cleartext-Password')))
       .where(
-        and(
-          eq(organizations.tenantId, tenantId),
-          isNull(organizations.deletedAt)
-        )
+        effectiveTenantId ? and(eq(organizations.tenantId, effectiveTenantId), isNull(organizations.deletedAt)) : isNull(organizations.deletedAt)
       )
       .groupBy(organizations.id)
       .orderBy(desc(organizations.createdAt));
@@ -49,16 +48,19 @@ export const getGroups = async (request: FastifyRequest, reply: FastifyReply) =>
 
 // Create a new group
 export const createGroup = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
-  const { name, defaultProfile, description } = request.body as {
+  const user = request.user as any;
+  const { name, defaultProfile, description, tenantId: bodyTenantId } = request.body as {
     name: string;
     defaultProfile?: string;
     description?: string;
+    tenantId?: string;
   };
+  const effectiveTenantId = user.tenantId || bodyTenantId;
+  if (!effectiveTenantId) return reply.code(400).send({ error: "tenantId is required" });
 
   try {
     const [newGroup] = await db.insert(organizations).values({
-      tenantId,
+      tenantId: effectiveTenantId,
       name,
       defaultProfile: defaultProfile || null,
       description: description || null,
@@ -73,8 +75,14 @@ export const createGroup = async (request: FastifyRequest, reply: FastifyReply) 
 
 // Update a group
 export const updateGroup = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+    const user = request.user as any;
   const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  }
   const { name, defaultProfile, description } = request.body as {
     name: string;
     defaultProfile?: string;
@@ -146,8 +154,14 @@ export const updateGroup = async (request: FastifyRequest, reply: FastifyReply) 
 
 // Soft delete a group
 export const deleteGroup = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+    const user = request.user as any;
   const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  }
 
   try {
     // Check if group is a system group
@@ -186,8 +200,14 @@ export const deleteGroup = async (request: FastifyRequest, reply: FastifyReply) 
 
 // Bulk Disable (Suspend) All Users in Group
 export const bulkDisableGroupUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+    const user = request.user as any;
   const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  }
 
   try {
     // Get all usernames in this group
@@ -265,8 +285,14 @@ export const bulkDisableGroupUsers = async (request: FastifyRequest, reply: Fast
 
 // Bulk Delete All Users in Group
 export const bulkDeleteGroupUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+    const user = request.user as any;
   const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  }
 
   try {
     // Get all usernames in this group
@@ -330,8 +356,14 @@ export const bulkDeleteGroupUsers = async (request: FastifyRequest, reply: Fasti
 
 // Bulk Enable (Reactivate) All Users in Group
 export const bulkEnableGroupUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+    const user = request.user as any;
   const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  }
 
   try {
     // Do NOT filter isNull(radcheck.deletedAt) so we can restore soft-deleted users
@@ -375,8 +407,14 @@ export const bulkEnableGroupUsers = async (request: FastifyRequest, reply: Fasti
 
 // Get members of a specific group
 export const getGroupMembers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+    const user = request.user as any;
   const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  }
 
   try {
     const members = await db.select({
@@ -430,8 +468,14 @@ export const getGroupMembers = async (request: FastifyRequest, reply: FastifyRep
 
 // Bulk Transfer Users to another Group
 export const bulkTransferGroupUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
-  const { id } = request.params as { id: string }; // Source group
+    const user = request.user as any;
+  const { id } = request.params as { id: string };
+  let tenantId = user.tenantId;
+  if (!tenantId) {
+    const group = await db.query.organizations.findFirst({ where: eq(organizations.id, id) });
+    if (!group) return reply.code(404).send({ error: "User group not found" });
+    tenantId = group.tenantId;
+  } // Source group
   const { targetGroupId } = request.body as { targetGroupId: string };
 
   if (!targetGroupId) {

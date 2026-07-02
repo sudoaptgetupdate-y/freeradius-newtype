@@ -1,0 +1,153 @@
+import { useTranslation } from "react-i18next"
+import { Users, Server, Activity, ArrowUpRight, Ticket, CalendarIcon, Download } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { NetworkTrafficChart } from "@/components/network-traffic-chart"
+import { FailedLoginsList } from "@/components/failed-logins-list"
+import { useDashboardStats } from "../hooks/useDashboardStats"
+
+export function MasterDashboard() {
+  const { t } = useTranslation()
+  const { stats } = useDashboardStats()
+
+  return (
+    <div className="space-y-6">
+      {/* Dashboard Header Style */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">{t('dashboard.masterTitle')}</h2>
+          <p className="text-[15px] text-muted-foreground mt-1">{t('dashboard.masterSubtitle')}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="hidden sm:flex h-10 px-4 rounded-xl border-border bg-card text-foreground shadow-sm font-medium hover:bg-accent/50 hover:text-primary transition-colors">
+            <CalendarIcon className="mr-2 h-[18px] w-[18px] text-primary" />
+            Jan 20, 2026 - Feb 09, 2026
+          </Button>
+          <Button className="h-10 px-4 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors">
+            <Download className="mr-2 h-[18px] w-[18px]" />
+            Download
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Tenants */}
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.totalTenants')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.totalTenants}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                <Server className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-emerald-500 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +2
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">{t('dashboard.totalTenantsDesc')}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Online Users */}
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.onlineUsers')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.onlineUsers}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#49beff]/10 flex items-center justify-center shrink-0">
+                <Users className="h-6 w-6 text-secondary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-emerald-500 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +12%
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">{t('dashboard.onlineUsersMasterDesc')}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Network Traffic */}
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">{t('dashboard.networkTraffic')}</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.trafficGB}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#13deb9]/10 flex items-center justify-center shrink-0">
+                <Activity className="h-6 w-6 text-[#13deb9]" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-[#13deb9] font-semibold bg-[#13deb9]/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +8%
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">{t('dashboard.networkTrafficMasterDesc')}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Vouchers */}
+        <Card className="border-none shadow-md overflow-hidden relative">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-semibold text-muted-foreground mb-1">Active Vouchers</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.activeVouchers || 1240}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f6b51e]/10 flex items-center justify-center shrink-0">
+                <Ticket className="h-6 w-6 text-[#f6b51e]" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+              <span className="flex items-center text-[#f6b51e] font-semibold bg-[#f6b51e]/10 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+                +145
+              </span>
+              <span className="text-muted-foreground ml-2 text-[13px]">from last month</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+        {/* Network Traffic Chart */}
+        <Card className="col-span-1 md:col-span-2 lg:col-span-3 border-none shadow-md">
+          <CardHeader className="px-6 py-5 border-b border-border/50">
+            <CardTitle className="text-lg">{t('dashboard.globalTrafficTitle')}</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {t('dashboard.globalTrafficDesc')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="h-[350px]">
+              <NetworkTrafficChart />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="col-span-1">
+          <div className="bg-card rounded-xl shadow-md h-full overflow-hidden border-none">
+            <div className="px-6 py-5 border-b border-border/50">
+              <h3 className="font-semibold text-lg text-foreground">Security Log</h3>
+              <p className="text-sm text-muted-foreground mt-1">Failed authentication attempts</p>
+            </div>
+            <div className="p-0">
+              <FailedLoginsList />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

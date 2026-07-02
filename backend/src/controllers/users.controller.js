@@ -30,6 +30,7 @@ const userUpdateSchema = z.object({
     expiration: z.string().optional(),
     profileName: z.string().min(1).optional(),
     groupId: z.string().uuid().optional().nullable(),
+    tenantId: z.string().optional(),
 });
 export const getUsers = async (request, reply) => {
     try {
@@ -141,11 +142,11 @@ export const createUser = async (request, reply) => {
     try {
         const user = request.user;
         const data = userSchema.parse(request.body);
-        // tenantId comes exclusively from JWT — this enforces tenant scope for both
-        // regular Tenant Admins and impersonating Super Admins
-        const targetTenantId = user.tenantId ?? null;
+        // tenantId comes from JWT (enforcing scope for Tenant Admins and impersonating Super Admins)
+        // or from the request body if Super Admin is creating a user globally.
+        const targetTenantId = user.tenantId || data.tenantId || null;
         if (!targetTenantId) {
-            return reply.status(400).send({ error: "Tenant context is required. Super Admin must impersonate a tenant first." });
+            return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId or impersonate a tenant first." });
         }
         // Check duplicate
         const existing = await db.select().from(radcheck).where(and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, data.username))).limit(1);
@@ -260,7 +261,7 @@ export const updateUser = async (request, reply) => {
         const user = request.user;
         const { username } = request.params;
         const data = userUpdateSchema.parse(request.body);
-        const targetTenantId = user.tenantId || request.query.tenantId || null;
+        const targetTenantId = user.tenantId || data.tenantId || request.query.tenantId || null;
         if (!targetTenantId) {
             return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });
         }

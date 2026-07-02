@@ -395,6 +395,25 @@ export declare const voucherSettings: import("drizzle-orm/pg-core").PgTableWithC
         }, {}, {
             length: 100;
         }>;
+        footerText: import("drizzle-orm/pg-core").PgColumn<{
+            name: "footer_text";
+            tableName: "voucher_settings";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 255;
+        }>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "created_at";
             tableName: "voucher_settings";

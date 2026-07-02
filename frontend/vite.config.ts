@@ -14,3 +14,5 @@ export default defineConfig({
     },
   },
 })
+
+// Trigger Vite reload

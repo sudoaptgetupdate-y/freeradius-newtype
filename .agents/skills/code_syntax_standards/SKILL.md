@@ -94,3 +94,26 @@ description: Strict guidelines for coding syntax, file structures, and code qual
 ### 4.3 Error Boundaries & Global Error Handler
 - **Frontend (React):** บังคับใช้ `<ErrorBoundary>` หุ้ม Component ระดับสูง (เช่น หน้า Page) เพื่อป้องกันไม่ให้แอปแสดงผลหน้าขาว (White Screen of Death) เวลาเกิดบั๊กที่ไม่ได้คาดคิด
 - **Backend (Fastify):** บังคับใช้ `fastify.setErrorHandler()` แบบ Global เพื่อดักจับ Error (Unhandled Exceptions) ทั้งระบบ และทำการแปลงเป็น HTTP 500 JSON รูปแบบมาตรฐานแทนการคาย Stack Trace ออกไปให้ Client เห็น
+
+
+## 5. Code Structure & Refactoring Standards (การจัดระเบียบและแบ่งสัดส่วนโค้ด)
+
+เพื่อป้องกันปัญหาไฟล์โค้ดยาวเกินไป (Monolithic files) ซึ่งทำให้ยากต่อการดูแลและเสี่ยงต่อการกระทบโค้ดส่วนอื่นเมื่อแก้ไข กรุณาปฏิบัติตามมาตรฐานดังนี้:
+
+### 5.1 Frontend (React) - Componentization
+- **Max Lines Per File:** พยายามควบคุมไม่ให้ไฟล์ Page หรือ Component มีความยาวเกิน 250-300 บรรทัด
+- **Extract Dialogs & Modals:** หากใน 1 หน้า Page มี Dialog หลายตัว (เช่น Add, Edit, Delete, Bulk Action) **ห้าม** เขียน Dialog ทั้งหมดสุมไว้ในไฟล์ Page เดียว ให้แยกแต่ละ Dialog ออกเป็น Component ของตัวเอง (เช่น `components/groups/CreateGroupDialog.tsx`) และรับ Props (เช่น `isOpen`, `onClose`, `onSuccess`) แทน
+- **Extract Custom Hooks:** การจัดการ State ที่ซับซ้อน และการ Fetch ข้อมูล (API Calls) ควรถูกแยกออกไปเป็น Custom Hooks (เช่น `useGroups.ts`) เพื่อให้ไฟล์ Page มีหน้าที่แค่ประมวลผล UI (JSX) เป็นหลัก
+- **Reusable Components:** UI Element ที่ถูกเรียกใช้บ่อยหรือซ้ำกันในหลายหน้า (เช่น ตารางที่มี Filter, Card แสดงข้อมูล) ควรถูกดึงออกเป็น Shared Component
+
+### 5.2 Backend (Node.js/Fastify) - Thin Controllers, Fat Services
+- **Thin Controllers:** หน้าที่ของ Controller ควรมีเพียง:
+  1. รับ Request (Body, Query, Params) และดึงข้อมูลผู้ใช้ (เช่น `request.user`)
+  2. เรียกใช้งานฟังก์ชันที่อยู่ใน Service Layer
+  3. จัดการ Error Handling เบื้องต้น และส่ง Reply กลับไปยัง Client
+  - **ห้าม** เขียน Business Logic ที่ซับซ้อน, การคำนวณ, หรือ Query Database ยาวๆ ไว้ในไฟล์ Controller
+- **Fat Services:** ตรรกะการทำงานทั้งหมด (Business Logic) รวมถึงการทำ Database Transaction, การดึงข้อมูลหลายๆ Table มาประกอบกัน ต้องอยู่ในไฟล์ `src/services/`
+- **Code Reusability:** หากมี Logic บางอย่างถูกใช้งานบ่อยในหลาย Controller (เช่น การตรวจสอบ Tenant) ให้แยกออกเป็น Middleware หรือ Utility Function กลาง เพื่อป้องกันการเขียนโค้ดซ้ำ (DRY - Don't Repeat Yourself)
+
+- **Extract Query Logic:** หากใช้ Drizzle ORM แล้วมีเงื่อนไข `where` หรือ `leftJoin` ที่ซับซ้อนมากๆ ให้ดึงก้อนเงื่อนไขนั้นออกมาประกาศเป็นตัวแปร (Variables) ก่อนที่จะนำไปใส่ใน Query Builder เพื่อให้อ่านง่าย
+- **Extract Zod Schemas:** หากมี Validation Schema ของ Zod ที่ใหญ่มาก ห้ามประกาศสุมไว้ในไฟล์ Controller ให้แยกออกไปไว้ในโฟลเดอร์ `src/schemas/` หรือแยกไฟล์ต่างหาก

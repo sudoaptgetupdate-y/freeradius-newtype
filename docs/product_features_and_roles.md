@@ -44,6 +44,10 @@
 - **การแจ้งเตือน (Notifications):** แจ้งเตือนสถานะ Server ล่ม, ทรัพยากรเต็ม (CPU/RAM > 90%), และแจ้งเตือนเมื่อ Tenant ยื่นคำขอดาวน์โหลด Log (สามารถกด Approve จาก Telegram ได้เลย)
 - **คำสั่งบอท (Commands):** พิมพ์ `/status` เพื่อดูสถานะเซิร์ฟเวอร์, พิมพ์ `/tenants` เพื่อดูจำนวน Site ที่แอคทีฟอยู่
 
+### 1.7 การรักษาความปลอดภัยและการแบ่งแยกระดับสิทธิ์ (Route & Menu Protection)
+- **UI & Routing Security:** ระบบมีการแยกหน้าเมนูของ Master Admin (เช่น `/tenants`, `/settings`, `/site-settings`) ออกจาก Tenant Admin อย่างเด็ดขาด โดยในฝั่ง Frontend (React Router) มีการครอบ `ProtectedRoute allowedRoles={["super_admin"]}` ซ้อนเข้าไปเฉพาะกลุ่ม Route เหล่านี้ 
+- **ป้องกันการคาดเดา URL:** ถึงแม้ Tenant Admin จะไม่เห็นเมนูใน Sidebar แต่หากพยายามพิมพ์ URL ตรงๆ เพื่อเข้าถึงหน้าของ Master Admin ระบบจะดักจับและดีดกลับไปที่หน้าแรก (Dashboard) ทันที ป้องกันปัญหาช่องโหว่ด้าน UX อย่างรัดกุม
+
 ---
 
 ## 🏢 ภาคที่ 2: ระบบจัดการสำหรับลูกค้าผู้เช่า (Tenant Administration)

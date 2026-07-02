@@ -34,6 +34,7 @@ const userUpdateSchema = z.object({
   expiration: z.string().optional(),
   profileName: z.string().min(1).optional(),
   groupId: z.string().uuid().optional().nullable(),
+  tenantId: z.string().optional(),
 });
 
 export const getUsers = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -188,12 +189,12 @@ export const createUser = async (request: FastifyRequest, reply: FastifyReply) =
   try {
     const user = request.user as any;
     const data = userSchema.parse(request.body);
-    // tenantId comes exclusively from JWT — this enforces tenant scope for both
-    // regular Tenant Admins and impersonating Super Admins
-    const targetTenantId: string | null = user.tenantId ?? null;
+    // tenantId comes from JWT (enforcing scope for Tenant Admins and impersonating Super Admins)
+    // or from the request body if Super Admin is creating a user globally.
+    const targetTenantId: string | null = user.tenantId || data.tenantId || null;
 
     if (!targetTenantId) {
-      return reply.status(400).send({ error: "Tenant context is required. Super Admin must impersonate a tenant first." });
+      return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId or impersonate a tenant first." });
     }
 
     // Check duplicate
@@ -330,7 +331,7 @@ export const updateUser = async (request: FastifyRequest, reply: FastifyReply) =
     const user = request.user as any;
     const { username } = request.params as { username: string };
     const data = userUpdateSchema.parse(request.body);
-    const targetTenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+    const targetTenantId: string | null = user.tenantId || data.tenantId || (request.query as any).tenantId || null;
 
     if (!targetTenantId) {
       return reply.status(400).send({ error: "Tenant context is required. Super Admin must provide a tenantId." });

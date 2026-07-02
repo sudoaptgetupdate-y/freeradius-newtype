@@ -29,6 +29,7 @@ export const voucherSettings = pgTable("voucher_settings", {
   logoUrl: varchar("logo_url", { length: 500 }),
   headerText: varchar("header_text", { length: 100 }),
   ssidName: varchar("ssid_name", { length: 100 }),
+  footerText: varchar("footer_text", { length: 255 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

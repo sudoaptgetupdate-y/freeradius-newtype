@@ -41,7 +41,12 @@ async function disconnectActiveUsers(tenantId: string, usernames: string[], requ
 }
 
 export const bulkDisableUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+  const user = request.user as any;
+  const tenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+
+  if (!tenantId) {
+    return reply.status(400).send({ error: "Tenant context is required" });
+  }
   const { usernames } = request.body as { usernames: string[] };
 
   if (!usernames || usernames.length === 0) {
@@ -90,7 +95,12 @@ export const bulkDisableUsers = async (request: FastifyRequest, reply: FastifyRe
 };
 
 export const bulkEnableUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+  const user = request.user as any;
+  const tenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+
+  if (!tenantId) {
+    return reply.status(400).send({ error: "Tenant context is required" });
+  }
   const { usernames } = request.body as { usernames: string[] };
 
   if (!usernames || usernames.length === 0) {
@@ -115,7 +125,12 @@ export const bulkEnableUsers = async (request: FastifyRequest, reply: FastifyRep
 };
 
 export const bulkDeleteUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+  const user = request.user as any;
+  const tenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+
+  if (!tenantId) {
+    return reply.status(400).send({ error: "Tenant context is required" });
+  }
   const { usernames } = request.body as { usernames: string[] };
 
   if (!usernames || usernames.length === 0) {
@@ -144,7 +159,12 @@ export const bulkDeleteUsers = async (request: FastifyRequest, reply: FastifyRep
 };
 
 export const bulkTransferUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+  const user = request.user as any;
+  const tenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+
+  if (!tenantId) {
+    return reply.status(400).send({ error: "Tenant context is required" });
+  }
   const { usernames, targetGroupId } = request.body as { usernames: string[], targetGroupId: string };
 
   if (!usernames || usernames.length === 0) {
@@ -185,7 +205,12 @@ export const bulkTransferUsers = async (request: FastifyRequest, reply: FastifyR
 };
 
 export const bulkImportUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { tenantId } = request.user as { tenantId: string };
+  const user = request.user as any;
+  const tenantId: string | null = user.tenantId || (request.query as any).tenantId || null;
+
+  if (!tenantId) {
+    return reply.status(400).send({ error: "Tenant context is required" });
+  }
   const { users } = request.body as {
     users: Array<{
       username: string;

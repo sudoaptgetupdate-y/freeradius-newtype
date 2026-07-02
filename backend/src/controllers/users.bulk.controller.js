@@ -32,7 +32,11 @@ async function disconnectActiveUsers(tenantId, usernames, request) {
     }
 }
 export const bulkDisableUsers = async (request, reply) => {
-    const { tenantId } = request.user;
+    const user = request.user;
+    const tenantId = user.tenantId || request.query.tenantId || null;
+    if (!tenantId) {
+        return reply.status(400).send({ error: "Tenant context is required" });
+    }
     const { usernames } = request.body;
     if (!usernames || usernames.length === 0) {
         return reply.status(400).send({ error: "No users provided" });
@@ -65,7 +69,11 @@ export const bulkDisableUsers = async (request, reply) => {
     }
 };
 export const bulkEnableUsers = async (request, reply) => {
-    const { tenantId } = request.user;
+    const user = request.user;
+    const tenantId = user.tenantId || request.query.tenantId || null;
+    if (!tenantId) {
+        return reply.status(400).send({ error: "Tenant context is required" });
+    }
     const { usernames } = request.body;
     if (!usernames || usernames.length === 0) {
         return reply.status(400).send({ error: "No users provided" });
@@ -80,7 +88,11 @@ export const bulkEnableUsers = async (request, reply) => {
     }
 };
 export const bulkDeleteUsers = async (request, reply) => {
-    const { tenantId } = request.user;
+    const user = request.user;
+    const tenantId = user.tenantId || request.query.tenantId || null;
+    if (!tenantId) {
+        return reply.status(400).send({ error: "Tenant context is required" });
+    }
     const { usernames } = request.body;
     if (!usernames || usernames.length === 0) {
         return reply.status(400).send({ error: "No users provided" });
@@ -100,7 +112,11 @@ export const bulkDeleteUsers = async (request, reply) => {
     }
 };
 export const bulkTransferUsers = async (request, reply) => {
-    const { tenantId } = request.user;
+    const user = request.user;
+    const tenantId = user.tenantId || request.query.tenantId || null;
+    if (!tenantId) {
+        return reply.status(400).send({ error: "Tenant context is required" });
+    }
     const { usernames, targetGroupId } = request.body;
     if (!usernames || usernames.length === 0) {
         return reply.status(400).send({ error: "No users provided" });
@@ -128,7 +144,11 @@ export const bulkTransferUsers = async (request, reply) => {
     }
 };
 export const bulkImportUsers = async (request, reply) => {
-    const { tenantId } = request.user;
+    const user = request.user;
+    const tenantId = user.tenantId || request.query.tenantId || null;
+    if (!tenantId) {
+        return reply.status(400).send({ error: "Tenant context is required" });
+    }
     const { users } = request.body;
     if (!users || users.length === 0) {
         return reply.status(400).send({ error: "No users provided" });

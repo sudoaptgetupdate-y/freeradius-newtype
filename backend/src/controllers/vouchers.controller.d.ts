@@ -31,6 +31,7 @@ export declare const updateVoucherSettingsSchema: z.ZodObject<{
     logoUrl: z.ZodPreprocess<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
     headerText: z.ZodPreprocess<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
     ssidName: z.ZodPreprocess<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
+    footerText: z.ZodPreprocess<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
 }, z.core.$strip>;
 export declare const updateVoucherSettings: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
 //# sourceMappingURL=vouchers.controller.d.ts.map

@@ -22,7 +22,7 @@ export const getAdmins = async (request: FastifyRequest, reply: FastifyReply) =>
     const user = request.user as any;
     let result;
 
-    if (user.role === "super_admin" || user.role === "admin") {
+    if ((user.role === "super_admin" || user.role === "admin") && !user.isImpersonating) {
       result = await db.select({
         id: admins.id,
         firstName: admins.firstName,
@@ -67,9 +67,12 @@ export const createAdmin = async (request: FastifyRequest, reply: FastifyReply) 
     }
 
     // Authorization checks
-    if (user.role !== "super_admin") {
+    if (user.role !== "super_admin" || user.isImpersonating) {
       if (data.role === "super_admin" || data.role === "master_staff") {
         return reply.status(403).send({ error: "Forbidden: Cannot create super admin or master staff" });
+      }
+      if (!data.tenantId) {
+        data.tenantId = user.tenantId;
       }
       if (data.tenantId !== user.tenantId) {
         return reply.status(403).send({ error: "Forbidden: Cannot create user for another tenant" });
@@ -121,7 +124,10 @@ export const updateAdmin = async (request: FastifyRequest, reply: FastifyReply) 
     }
 
     // Auth checks
-    if (user.role !== "super_admin") {
+    if (user.role !== "super_admin" || user.isImpersonating) {
+      if (!data.tenantId) {
+        data.tenantId = user.tenantId;
+      }
       if (targetAdmin[0]!.tenantId !== user.tenantId || data.tenantId !== user.tenantId) {
         return reply.status(403).send({ error: "Forbidden" });
       }
@@ -184,7 +190,7 @@ export const deleteAdmin = async (request: FastifyRequest, reply: FastifyReply) 
     }
 
     // Check permissions
-    if (user.role !== "super_admin" && targetAdmin[0]!.tenantId !== user.tenantId) {
+    if ((user.role !== "super_admin" || user.isImpersonating) && targetAdmin[0]!.tenantId !== user.tenantId) {
       return reply.status(403).send({ error: "Forbidden" });
     }
 

@@ -102,6 +102,7 @@ export const getVoucherSettings = async (request: FastifyRequest, reply: Fastify
       logoUrl: null,
       headerText: null,
       ssidName: null,
+      footerText: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -116,6 +117,7 @@ export const updateVoucherSettingsSchema = z.object({
   logoUrl: z.preprocess((val) => val === "" ? null : val, z.string().max(500).nullable().optional()),
   headerText: z.preprocess((val) => val === "" ? null : val, z.string().max(100).nullable().optional()),
   ssidName: z.preprocess((val) => val === "" ? null : val, z.string().max(100).nullable().optional()),
+  footerText: z.preprocess((val) => val === "" ? null : val, z.string().max(255).nullable().optional()),
 });
 
 export const updateVoucherSettings = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -133,6 +135,7 @@ export const updateVoucherSettings = async (request: FastifyRequest, reply: Fast
     logoUrl: body.logoUrl ?? null,
     headerText: body.headerText ?? null,
     ssidName: body.ssidName ?? null,
+    footerText: body.footerText ?? null,
     updatedAt: new Date(),
   }).onConflictDoUpdate({
     target: voucherSettings.tenantId,
@@ -141,6 +144,7 @@ export const updateVoucherSettings = async (request: FastifyRequest, reply: Fast
       logoUrl: body.logoUrl ?? null,
       headerText: body.headerText ?? null,
       ssidName: body.ssidName ?? null,
+      footerText: body.footerText ?? null,
       updatedAt: new Date(),
     }
   }).returning();
