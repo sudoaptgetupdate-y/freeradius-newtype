@@ -214,7 +214,7 @@ export function CreateUserDialog({
                           <SelectValue placeholder="Select a group" />
                         </SelectTrigger>
                         <SelectContent>
-                          {groups.filter(g => !g.tenantId || g.tenantId === formData.tenantId).map(g => (
+                          {groups.filter(g => !g.tenantId || !formData.tenantId || g.tenantId === formData.tenantId).map(g => (
                             <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                           ))}
                         </SelectContent>

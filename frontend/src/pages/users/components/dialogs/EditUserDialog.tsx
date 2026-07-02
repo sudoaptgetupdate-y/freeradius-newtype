@@ -206,7 +206,7 @@ export function EditUserDialog({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No Group</SelectItem>
-                            {groups.filter(g => !g.tenantId || g.tenantId === editFormData.tenantId).map(g => (
+                            {groups.filter(g => !g.tenantId || !editFormData.tenantId || g.tenantId === editFormData.tenantId).map(g => (
                               <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                             ))}
                           </SelectContent>
