@@ -81,7 +81,8 @@ export function BulkImportDialog({
     const example1 = "john_doe,pass1234,John,Doe,MBR001,1100999999999,john@example.com,0812345678,2027-12-31T23:59,Standard Group\n";
     const example2 = "jane_smith,secret99,Jane,Smith,MBR002,,,,,VIP Group\n";
     const csvContent = headers + example1 + example2;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Prepend UTF-8 BOM (\uFEFF) to ensure Excel opens it correctly in UTF-8
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);

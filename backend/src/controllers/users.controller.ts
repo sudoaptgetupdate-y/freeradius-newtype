@@ -564,11 +564,17 @@ export const permanentDeleteUser = async (request: FastifyRequest, reply: Fastif
     await db.delete(radcheck).where(
       and(eq(radcheck.tenantId, targetTenantId), eq(radcheck.username, username))
     );
+    await db.delete(radreply).where(
+      and(eq(radreply.tenantId, targetTenantId), eq(radreply.username, username))
+    );
     await db.delete(radusergroup).where(
       and(eq(radusergroup.tenantId, targetTenantId), eq(radusergroup.username, username))
     );
     await db.delete(userOrganizations).where(
       and(eq(userOrganizations.tenantId, targetTenantId), eq(userOrganizations.username, username))
+    );
+    await db.delete(userinfo).where(
+      and(eq(userinfo.tenantId, targetTenantId), eq(userinfo.username, username))
     );
 
     reply.send({ message: "User deleted permanently" });

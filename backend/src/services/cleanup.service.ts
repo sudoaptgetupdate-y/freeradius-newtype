@@ -1,7 +1,8 @@
 import { db } from "../db";
 import { tenants } from "../schema/tenants";
-import { radcheck, radacct, radusergroup } from "../schema/freeradius";
+import { radcheck, radacct, radusergroup, radreply } from "../schema/freeradius";
 import { userOrganizations } from "../schema/organizations";
+import { userinfo } from "../schema/userinfo";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
 
 import { CronJob } from "cron";
@@ -40,11 +41,17 @@ export class CleanupService {
             await db.delete(radcheck).where(
               and(eq(radcheck.tenantId, tenant.id), eq(radcheck.username, username))
             );
+            await db.delete(radreply).where(
+              and(eq(radreply.tenantId, tenant.id), eq(radreply.username, username))
+            );
             await db.delete(radusergroup).where(
               and(eq(radusergroup.tenantId, tenant.id), eq(radusergroup.username, username))
             );
             await db.delete(userOrganizations).where(
               and(eq(userOrganizations.tenantId, tenant.id), eq(userOrganizations.username, username))
+            );
+            await db.delete(userinfo).where(
+              and(eq(userinfo.tenantId, tenant.id), eq(userinfo.username, username))
             );
           }
         }

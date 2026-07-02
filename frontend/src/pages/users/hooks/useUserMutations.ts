@@ -17,14 +17,17 @@ export function useUserMutations(
   const [isLoading, setIsLoading] = useState(false)
 
   const handleDeleteUser = async (username: string) => {
+    const isHardDelete = statusFilter === 'bin'
     const result = await MySwal.fire({
-      title: 'Are you sure?',
-      text: `Do you want to delete user ${username}?`,
+      title: isHardDelete ? 'Permanently Delete User?' : 'Are you sure?',
+      text: isHardDelete 
+        ? `You are about to PERMANENTLY delete user ${username}. This action cannot be undone and will delete all related records.`
+        : `Do you want to move user ${username} to trash?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonText: isHardDelete ? 'Yes, delete permanently!' : 'Yes, delete it!'
     })
 
     if (result.isConfirmed) {
@@ -71,6 +74,24 @@ export function useUserMutations(
     selectedTenantFilter?: string
   ) => {
     if (selectedUsers.length === 0) return
+
+    // Show confirmation dialog for dangerous actions
+    if (action === 'delete' || action === 'hard_delete' || action === 'suspend') {
+      const isHardDelete = action === 'hard_delete';
+      const actionName = action === 'suspend' ? 'suspend' : (isHardDelete ? 'PERMANENTLY delete' : 'move to trash');
+      const result = await MySwal.fire({
+        title: 'Are you sure?',
+        text: `You are about to ${actionName} ${selectedUsers.length} users. ${isHardDelete ? 'This cannot be undone!' : ''}`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: `Yes, ${actionName} them!`
+      });
+
+      if (!result.isConfirmed) return;
+    }
+
     setIsLoading(true)
     try {
       if (action === 'restore' || action === 'hard_delete') {
